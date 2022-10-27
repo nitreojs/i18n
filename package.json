@@ -1,0 +1,25 @@
+{
+  "name": "@starkow/i18n",
+  "version": "1.0.0",
+  "description": "simple yet effective i18n package",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "keywords": [
+    "i18n"
+  ],
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "author": "starkow",
+  "license": "WTFPL",
+  "dependencies": {
+    "micromustache": "^8.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.7",
+    "typescript": "^4.8.4"
+  }
+}

@@ -8,8 +8,9 @@
 
 ### usage
 
+#### locales/ru.json
+
 ```json
-/// file: locales/en.json
 {
   "foo": {
     "bar": [
@@ -29,9 +30,9 @@
 }
 ```
 
-```ts
-/// file: src/main.ts
+#### src/main.ts
 
+```ts
 import { resolve } from 'node:path'
 
 import { I18n } from '@starkow/i18n'
@@ -70,6 +71,8 @@ console.log(i18n.__n(7, 'declension.apple')) // "яблок"
 
 Returns: `string | undefined`
 
+Aliases: `getLocale()`, `setLocale(locale)`
+
 ```js
 i18n.locale
 ```
@@ -79,6 +82,8 @@ i18n.locale
 > Returns default locale - a locale which will be used in case current locale returns nothing
 
 Returns: `string | undefined`
+
+Aliases: `getDefaultLocale()`, `setDefaultLocale(locale)`
 
 ```js
 i18n.defaultLocale
@@ -90,13 +95,25 @@ i18n.defaultLocale
 
 Returns: `string | undefined`
 
+Aliases: `getLocalesPath()`, `setLocalesPath(path)`
+
 ```js
 i18n.localesPath
 ```
 
+### `getLanguages()`
+
+> Returns all the languages found in `localesPath`
+
+Returns: `string[]`
+
+```ts
+i18n.getLanguages()
+```
+
 ### `__r<T>(key: string)`
 
-> Returns raw entity from the JSON file
+> Returns raw entity from the locale file
 
 Returns: `T`
 
@@ -106,7 +123,7 @@ Aliases: `r<T>(...)`, `raw<T>(...)`
 i18n.__r<string[]>('menu.purchase.buttons')
 ```
 
-### `__(key: string, scope?: Scope, default_?: string)`
+### `__(key: MaybeArray<string>, scope?: Scope)`
 
 > Renders the template from the locale file
 
@@ -116,6 +133,20 @@ Aliases: `t(...)`, `translate(...)`
 
 ```ts
 i18n.__('hello.world')
+```
+
+**Note**: `__` accepts `string[]` as the first argument which is a fallback list.
+`@starkow/i18n` iterates through this list and returns the first found translation.
+If it didn't find any, then returns the last key from the list
+
+```ts
+// { "bar": "quix" }
+i18n.__(['foo', 'bar', 'baz']) // "quix"
+```
+
+```ts
+// { "hello": "world" }
+i18n.__(['foo', 'bar', 'baz']) // "baz"
 ```
 
 ### `__n(count: number, key: string, scope?: Scope)`

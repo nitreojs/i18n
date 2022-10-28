@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { I18nError } from './errors'
+import { MaybeArray } from './types/types'
 
 interface I18nOptions {
   localesPath?: string
@@ -33,60 +34,6 @@ export class I18n {
     )
   }
 
-  /**
-   * Returns current locale
-   */
-  get locale() {
-    return this.options.currentLocale
-  }
-
-  /**
-   * Updates current locale
-   * @param locale New locale
-   */
-  set locale(locale) {
-    this.options.currentLocale = locale
-
-    if (this.dictionaries !== undefined) {
-      this.loadDictionary()
-    }
-  }
-
-  /**
-   * Returns default locale - a locale which will be used in case current locale returns nothing
-   */
-  get defaultLocale() {
-    return this.options.defaultLocale
-  }
-
-  /**
-   * Updates default locale
-   * @param locale New locale
-   */
-  set defaultLocale(locale) {
-    this.options.defaultLocale = locale
-
-    if (this.dictionaries !== undefined) {
-      this.loadDictionary()
-    }
-  }
-
-  /**
-   * Returns path to locales
-   */
-  get localesPath() {
-    return this.options.localesPath
-  }
-
-  /**
-   * Updates locales path
-   * @param path New path
-   */
-  set localesPath(path) {
-    this.options.localesPath = path
-
-    this.loadDictionaries()
-  }
 
   private loadDictionaries() {
     if (this.localesPath === undefined) {
@@ -183,9 +130,128 @@ export class I18n {
     }
   }
 
+
   /**
-   * Returns raw entity from the JSON file. An alias for `__r`
-   * @param {string} key Locale key
+   * Returns current locale
+   */
+  get locale() {
+    return this.options.currentLocale
+  }
+
+  /**
+   * Returns current locale. An alias for `locale` getter
+   * @alias locale
+   */
+  getLocale() {
+    return this.locale
+  }
+
+  /**
+   * Updates current locale
+   * @param locale New locale
+   */
+  set locale(locale) {
+    this.options.currentLocale = locale
+
+    if (this.dictionaries !== undefined) {
+      this.loadDictionary()
+    }
+  }
+
+  /**
+   * Updates current locale. An alias for `locale` setter
+   * @param locale New locale
+   * @alias locale
+   */
+  setLocale(locale: string | undefined) {
+    this.locale = locale
+  }
+
+
+  /**
+   * Returns default locale - a locale which will be used in case current locale returns nothing
+   */
+  get defaultLocale() {
+    return this.options.defaultLocale
+  }
+
+  /**
+   * Returns default locale - a locale which will be used in case current locale returns nothing. An alias for
+   * `getDefaultLocale` getter
+   * @alias defaultLocale
+   */
+  getDefaultLocale() {
+    return this.defaultLocale
+  }
+
+  /**
+   * Updates default locale
+   * @param locale New locale
+   */
+  set defaultLocale(locale) {
+    this.options.defaultLocale = locale
+
+    if (this.dictionaries !== undefined) {
+      this.loadDictionary()
+    }
+  }
+
+  /**
+   * Updates default locale. An alias for `defaultLocale` setter
+   * @param locale New locale
+   * @alias defaultLocale
+   */
+  setDefaultLocale(locale: string | undefined) {
+    this.defaultLocale = locale
+  }
+
+
+  /**
+   * Returns path to locales
+   */
+  get localesPath() {
+    return this.options.localesPath
+  }
+
+  /**
+   * Returns path to locales. An alias for `localesPath` getter
+   * @alias localesPath
+   */
+  getLocalesPath() {
+    return this.localesPath
+  }
+
+  /**
+   * Updates locales path
+   * @param path New path
+   */
+  set localesPath(path) {
+    this.options.localesPath = path
+
+    this.loadDictionaries()
+  }
+
+  /**
+   * Updates locales path. An alias for `localesPath` setter
+   * @param path New path
+   * @alias localesPath
+   */
+  setLocalesPath(path: string | undefined) {
+    this.localesPath = path
+  }
+
+
+  /**
+   * Returns all the languages found in `localesPath`
+   */
+  getLanguages() {
+    return this.languages
+  }
+
+
+  /**
+   * Returns raw entity from the locale file. An alias for `__r`
+   * @param key Locale key
    * @alias __r
    */
   r<T>(key: string) {
@@ -193,8 +259,8 @@ export class I18n {
   }
 
   /**
-   * Returns raw entity from the JSON file. An alias for `__r`
-   * @param {string} key Locale key
+   * Returns raw entity from the locale file. An alias for `__r`
+   * @param key Locale key
    * @alias __r
    */
   raw<T>(key: string) {
@@ -202,8 +268,8 @@ export class I18n {
   }
 
   /**
-   * Returns raw entity from the JSON file
-   * @param {string} key Locale key
+   * Returns raw entity from the locale file
+   * @param key Locale key
    */
   __r<T>(key: string): T {
     this.preload()
@@ -211,51 +277,62 @@ export class I18n {
     return this.getTemplate(key, false) as T
   }
 
+
   /**
    * Renders the template from the locale file. An alias for `__`
-   * @param {string} key Locale key
-   * @param {Scope} scope Scope for variables
-   * @param {string?} default_ Default value
+   * @param keys String or an array of strings of translation keys
+   * @param scope Scope for variables
    * @alias __
    */
-  t(key: string, scope?: Scope, default_?: string) {
-    return this.__(key, scope, default_)
+  t(keys: MaybeArray<string>, scope?: Scope) {
+    return this.__(keys, scope)
   }
 
   /**
    * Renders the template from the locale file. An alias for `__`
-   * @param {string} key Locale key
-   * @param {Scope} scope Scope for variables
-   * @param {string?} default_ Default value
+   * @param keys String or an array of strings of translation keys
+   * @param scope Scope for variables
    * @alias __
    */
-  translate(key: string, scope?: Scope, default_?: string) {
-    return this.__(key, scope, default_)
+  translate(keys: MaybeArray<string>, scope?: Scope) {
+    return this.__(keys, scope)
   }
 
   /**
    * Renders the template from the locale file
-   * @param {string} key Locale key
-   * @param {Scope} scope Scope for variables
-   * @param {string?} default_ Default value
+   * @param keys String or an array of strings of translation keys
+   * @param scope Scope for variables
    */
-  __(key: string, scope?: Scope, default_?: string) {
+  __(keys: MaybeArray<string>, scope?: Scope) {
     this.preload()
 
-    const template = this.getTemplate(key)
+    const isInitiallyAnArray = Array.isArray(keys)
 
-    return (
-      template === key && default_ !== undefined
-        ? default_
-        : this.render(template, scope)
-    )
+    const actualKeys: string[] = isInitiallyAnArray ? keys : [keys]
+
+    for (let i = 0; i < actualKeys.length; i++) {
+      const key = actualKeys[i]
+
+      const template = this.getTemplate(key)
+
+      if (isInitiallyAnArray && template !== key) {
+        return template as string
+      }
+
+      if (template !== key) {
+        return template as string
+      }
+    }
+
+    return actualKeys[actualKeys.length - 1]
   }
+
 
   /**
    * Renders the plural template from the locale file. An alias for `__n`
-   * @param {number} count Amount of something
-   * @param {string} key Locale key
-   * @param {Scope} scope Scope for variables
+   * @param count Amount of something
+   * @param key Locale key
+   * @param scope Scope for variables
    * @alias __n
    */
   p(count: number, key: string, scope?: Scope) {
@@ -264,9 +341,9 @@ export class I18n {
 
   /**
    * Renders the plural template from the locale file. An alias for `__n`
-   * @param {number} count Amount of something
-   * @param {string} key Locale key
-   * @param {Scope} scope Scope for variables
+   * @param count Amount of something
+   * @param key Locale key
+   * @param scope Scope for variables
    * @alias __n
    */
   plural(count: number, key: string, scope?: Scope) {
@@ -275,9 +352,9 @@ export class I18n {
 
   /**
    * Renders the plural template from the locale file
-   * @param {number} count Amount of something
-   * @param {string} key Locale key
-   * @param {Scope} scope Scope for variables
+   * @param count Amount of something
+   * @param key Locale key
+   * @param scope Scope for variables
    */
   __n(count: number, key: string, scope?: Scope) {
     const obj = this.__r<Record<string, any>>(key)
@@ -306,10 +383,11 @@ export class I18n {
     return this.render(template, scope)
   }
 
+
   /**
    * Returns a list of all of translations for a given key in each locale. An alias for `__l`
-   * @param {string} key Locales key
-   * @param {Scope} scope Scope for variables
+   * @param key Locales key
+   * @param scope Scope for variables
    * @alias __l
    */
   l(key: string, scope?: Scope) {
@@ -318,8 +396,8 @@ export class I18n {
 
   /**
    * Returns a list of all of translations for a given key in each locale. An alias for `__l`
-   * @param {string} key Locales key
-   * @param {Scope} scope Scope for variables
+   * @param key Locales key
+   * @param scope Scope for variables
    * @alias __l
    */
   list(key: string, scope?: Scope) {
@@ -328,8 +406,8 @@ export class I18n {
 
   /**
    * Returns a list of all of translations for a given key in each locale
-   * @param {string} key Locales key
-   * @param {Scope} scope Scope for variables
+   * @param key Locales key
+   * @param scope Scope for variables
    */
   __l(key: string, scope?: Scope) {
     this.preload(false)
@@ -341,7 +419,9 @@ export class I18n {
 
       const template = this.getTemplate(key, true, dictionary)
 
-      templates.push(this.render(template, scope))
+      if (template !== key) {
+        templates.push(this.render(template, scope))
+      }
     }
 
     return templates

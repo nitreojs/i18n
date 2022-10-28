@@ -14,14 +14,16 @@
   "foo": {
     "bar": [
       {
-        "baz": "quix, {{hello}}"
+        "baz": "quix, <<hello>>"
       }
     ]
   },
   "declensions": {
     "apple": {
-      "one": "apple",
-      "other": "apples"
+      "one": "яблоко",
+      "few": "яблока",
+      "many": "яблок",
+      "other": "яблоки"
     }
   }
 }
@@ -52,11 +54,12 @@ const i18n = new I18n({
 i18n.locale = 'jp'
 
 // INFO: `i18n.__` is the same as `i18n.t`
-console.log(i18n.__('foo.bar.0.baz', { hello: 'world!' })) // "quix, world!"
+console.log(i18n.__('foo.bar.0.baz', { hello: 'world!' })) // "quix, world!", "<<hello>>" was replaced by "world!" 
 
 // INFO: `i18n.__n` is the same as `i18n.plural`
-console.log(i18n.__n(1, 'declension.apple')) // "apple"
-console.log(i18n.__n(5, 'declension.apple')) // "apples"
+console.log(i18n.__n(1, 'declension.apple')) // "яблоко"
+console.log(i18n.__n(3, 'declension.apple')) // "яблока"
+console.log(i18n.__n(7, 'declension.apple')) // "яблок"
 ```
 
 ## reference

@@ -188,6 +188,15 @@ export class I18n {
    * @param {string} key Locale key
    * @alias __r
    */
+  r<T>(key: string) {
+    return this.__r<T>(key)
+  }
+
+  /**
+   * Returns raw entity from the JSON file. An alias for `__r`
+   * @param {string} key Locale key
+   * @alias __r
+   */
   raw<T>(key: string) {
     return this.__r<T>(key)
   }
@@ -214,6 +223,17 @@ export class I18n {
   }
 
   /**
+   * Renders the template from the locale file. An alias for `__`
+   * @param {string} key Locale key
+   * @param {Scope} scope Scope for variables
+   * @param {string?} default_ Default value
+   * @alias __
+   */
+  translate(key: string, scope?: Scope, default_?: string) {
+    return this.__(key, scope, default_)
+  }
+
+  /**
    * Renders the template from the locale file
    * @param {string} key Locale key
    * @param {Scope} scope Scope for variables
@@ -229,6 +249,17 @@ export class I18n {
         ? default_
         : this.render(template, scope)
     )
+  }
+
+  /**
+   * Renders the plural template from the locale file. An alias for `__n`
+   * @param {number} count Amount of something
+   * @param {string} key Locale key
+   * @param {Scope} scope Scope for variables
+   * @alias __n
+   */
+  p(count: number, key: string, scope?: Scope) {
+    return this.__n(count, key, scope)
   }
 
   /**
@@ -273,6 +304,16 @@ export class I18n {
     }
 
     return this.render(template, scope)
+  }
+
+  /**
+   * Returns a list of all of translations for a given key in each locale. An alias for `__l`
+   * @param {string} key Locales key
+   * @param {Scope} scope Scope for variables
+   * @alias __l
+   */
+  l(key: string, scope?: Scope) {
+    return this.__l(key, scope)
   }
 
   /**

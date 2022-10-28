@@ -100,7 +100,7 @@ i18n.localesPath
 
 Returns: `T`
 
-Aliases: `raw<T>(...)`
+Aliases: `r<T>(...)`, `raw<T>(...)`
 
 ```ts
 i18n.__r<string[]>('menu.purchase.buttons')
@@ -112,7 +112,7 @@ i18n.__r<string[]>('menu.purchase.buttons')
 
 Returns: `string`
 
-Aliases: `t(...)`
+Aliases: `t(...)`, `translate(...)`
 
 ```ts
 i18n.__('hello.world')
@@ -124,7 +124,7 @@ i18n.__('hello.world')
 
 Returns: `string`
 
-Aliases: `plural(...)`
+Aliases: `p(...)`, `plural(...)`
 
 ```ts
 i18n.__n(7, 'declension.book')
@@ -136,7 +136,7 @@ i18n.__n(7, 'declension.book')
 
 Returns: `string[]`
 
-Aliases: `list(...)`
+Aliases: `l(...)`, `list(...)`
 
 ```ts
 i18n.__l('language_code')

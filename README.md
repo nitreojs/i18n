@@ -51,7 +51,13 @@ const i18n = new I18n({
   tags: ['<<', '>>'],
   
   // INFO: if `true`, throws an error when no translations are found
-  throwOnFailure: true
+  throwOnFailure: true,
+  
+  // INFO: this function is called whenever a file from `localesPath` is read
+  parser: (contents) => JSON.parse(contents),
+  
+  // INFO: a list of accepted file extensions
+  extensions: ['json']
 })
 
 // INFO: changing `currentLocale`
@@ -77,8 +83,6 @@ console.log(i18n.__('non-existent:key.that!will.throw.an.error')) // -> throws I
 
 Returns: `string | undefined`
 
-Aliases: `getLocale()`, `setLocale(locale)`
-
 ```js
 i18n.locale
 ```
@@ -88,8 +92,6 @@ i18n.locale
 > Returns default locale - a locale which will be used in case current locale returns nothing
 
 Returns: `string | undefined`
-
-Aliases: `getDefaultLocale()`, `setDefaultLocale(locale)`
 
 ```js
 i18n.defaultLocale
@@ -101,10 +103,48 @@ i18n.defaultLocale
 
 Returns: `string | undefined`
 
-Aliases: `getLocalesPath()`, `setLocalesPath(path)`
-
 ```js
 i18n.localesPath
+```
+
+### `tags`
+
+> Returns a list of render templates tags
+
+Returns: `[string, string]`
+
+```ts
+i18n.tags = ['{', '}']
+```
+
+### `throwOnFailure`
+
+> Returns whether the package will throw an error if it fails to find a translation
+
+Returns: `boolean`
+
+```ts
+i18n.throwOnFailure = true
+```
+
+### `parser`
+
+> Returns a function which is called when contents of a file are read
+
+Returns: `Parser` (`(contents: string) => Record<string, any>`)
+
+```ts
+i18n.parser = YAML.parse
+```
+
+### `extensions`
+
+> Returns a list of accepted file extensions (or an empty one if all files extensions are accepted)
+
+Returns: `string[]`
+
+```ts
+i18n.extension = ['json']
 ```
 
 ### `getLanguages()`

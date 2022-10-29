@@ -1,16 +1,44 @@
 import { render, Scope } from 'micromustache'
+
 import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { I18nError } from './errors'
 import { MaybeArray } from './types/types'
 
+type Parser = (contents: string) => Record<string, any>
+
+const defaultParser: Parser = (contents: string) => JSON.parse(contents)
+
 interface I18nOptions {
+  /**
+   * Path to locales
+   */
   localesPath?: string
+  /**
+   * Locale which will be used in case current locale was not found
+   */
   defaultLocale?: string
+  /**
+   * Current locale
+   */
   currentLocale?: string
+  /**
+   * Render templates tags
+   */
   tags?: [string, string]
+  /**
+   * Should the package throw an error if it fails to find a translation?
+   */
   throwOnFailure?: boolean
+  /**
+   * A function which is called when contents of a file are read
+   */
+  parser?: Parser
+  /**
+   * List of accepted file extensions (or an empty one if all files extensions are accepted)
+   */
+  extensions?: string[]
 }
 
 /**
@@ -41,7 +69,16 @@ export class I18n {
       throw new I18nError('`localesPath` is not defined')
     }
 
-    const files = readdirSync(this.localesPath).filter(file => file.endsWith('.json'))
+    const files = readdirSync(this.localesPath)
+      .filter(
+        (file) => (
+          this.extensions.length === 0
+            ? true
+            : this.extensions.includes(
+                file.slice(file.lastIndexOf('.') + 1)
+              )
+        )
+      )
 
     const dictionaries = files.reduce(
       (acc, path) => {
@@ -51,7 +88,12 @@ export class I18n {
           this.languages.push(key)
         }
 
-        acc[key] = JSON.parse(readFileSync(resolve(this.localesPath as string, path), 'utf8'))
+        acc[key] = this.parser(
+          readFileSync(
+            resolve(this.localesPath as string, path),
+            'utf8'
+          )
+        )
 
         return acc
       },
@@ -131,19 +173,12 @@ export class I18n {
     }
   }
 
+
   /**
    * Returns current locale
    */
   get locale() {
     return this.options.currentLocale
-  }
-
-  /**
-   * Returns current locale. An alias for `locale` getter
-   * @alias locale
-   */
-  getLocale() {
-    return this.locale
   }
 
   /**
@@ -158,30 +193,12 @@ export class I18n {
     }
   }
 
-  /**
-   * Updates current locale. An alias for `locale` setter
-   * @param locale New locale
-   * @alias locale
-   */
-  setLocale(locale: string | undefined) {
-    this.locale = locale
-  }
-
 
   /**
-   * Returns default locale - a locale which will be used in case current locale returns nothing
+   * Returns default locale - a locale which will be used in case current locale was not found
    */
   get defaultLocale() {
     return this.options.defaultLocale
-  }
-
-  /**
-   * Returns default locale - a locale which will be used in case current locale returns nothing. An alias for
-   * `getDefaultLocale` getter
-   * @alias defaultLocale
-   */
-  getDefaultLocale() {
-    return this.defaultLocale
   }
 
   /**
@@ -196,29 +213,12 @@ export class I18n {
     }
   }
 
-  /**
-   * Updates default locale. An alias for `defaultLocale` setter
-   * @param locale New locale
-   * @alias defaultLocale
-   */
-  setDefaultLocale(locale: string | undefined) {
-    this.defaultLocale = locale
-  }
-
 
   /**
    * Returns path to locales
    */
   get localesPath() {
     return this.options.localesPath
-  }
-
-  /**
-   * Returns path to locales. An alias for `localesPath` getter
-   * @alias localesPath
-   */
-  getLocalesPath() {
-    return this.localesPath
   }
 
   /**
@@ -231,44 +231,64 @@ export class I18n {
     this.loadDictionaries()
   }
 
+
   /**
-   * Updates locales path. An alias for `localesPath` setter
-   * @param path New path
-   * @alias localesPath
+   * Returns a list of render templates tags
    */
-  setLocalesPath(path: string | undefined) {
-    this.localesPath = path
+  get tags() {
+    return this.options.tags ?? ['{{', '}}']
+  }
+
+  /**
+   * Updates a list of render templates tags
+   */
+  set tags(tags) {
+    this.options.tags = tags
   }
 
 
   /**
    * Returns whether the package will throw an error if it fails to find a translation
    */
-  get throwOnFailure() {
+  get throwOnFailure(): boolean {
     return this.options.throwOnFailure ?? false
-  }
-
-  /**
-   * Returns whether the package will throw an error if it fails to find a translation. An alias for
-   * `throwOnFailure` getter
-   */
-  getThrowOnFailure() {
-    return this.throwOnFailure
   }
 
   /**
    * Updates whether the package will throw an error if it fails to find a translation
    */
-  set throwOnFailure(value) {
+  set throwOnFailure(value: boolean | undefined) {
     this.options.throwOnFailure = value ?? false
   }
 
+
   /**
-   * Updates whether the package will throw an error if it fails to find a translation. An alias for
-   * `throwOnFailure` setter
+   * Returns a function which is called when contents of a file are read
    */
-  setThrowOnFailure(value: boolean | undefined) {
-    this.options.throwOnFailure = value
+  get parser(): Parser {
+    return this.options.parser ?? defaultParser
+  }
+
+  /**
+   * Updates a function which is called when contents of a file are read
+   */
+  set parser(parser: Parser | undefined) {
+    this.options.parser = parser ?? defaultParser
+  }
+
+
+  /**
+   * Returns a list of accepted file extensions (or an empty one if all files extensions are accepted)
+   */
+  get extensions() {
+    return this.options.extensions ?? []
+  }
+
+  /**
+   * Updates a list of accepted file extensions (or an empty one if all files extensions are accepted)
+   */
+  set extensions(extensions) {
+    this.options.extensions = extensions
   }
 
 

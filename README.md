@@ -48,7 +48,10 @@ const i18n = new I18n({
   defaultLocale: 'en',
   
   // INFO: tags for `micromustache` package, used in render templates
-  tags: ['<<', '>>']
+  tags: ['<<', '>>'],
+  
+  // INFO: if `true`, throws an error when no translations are found
+  throwOnFailure: true
 })
 
 // INFO: changing `currentLocale`
@@ -61,6 +64,9 @@ console.log(i18n.__('foo.bar.0.baz', { hello: 'world!' })) // "quix, world!", "<
 console.log(i18n.__n(1, 'declension.apple')) // "яблоко"
 console.log(i18n.__n(3, 'declension.apple')) // "яблока"
 console.log(i18n.__n(7, 'declension.apple')) // "яблок"
+
+// INFO: an example of `throwOnFailure` error throwing
+console.log(i18n.__('non-existent:key.that!will.throw.an.error')) // -> throws I18nError
 ```
 
 ## reference

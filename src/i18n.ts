@@ -10,6 +10,7 @@ interface I18nOptions {
   defaultLocale?: string
   currentLocale?: string
   tags?: [string, string]
+  throwOnFailure?: boolean
 }
 
 /**
@@ -130,7 +131,6 @@ export class I18n {
     }
   }
 
-
   /**
    * Returns current locale
    */
@@ -242,6 +242,37 @@ export class I18n {
 
 
   /**
+   * Returns whether the package will throw an error if it fails to find a translation
+   */
+  get throwOnFailure() {
+    return this.options.throwOnFailure ?? false
+  }
+
+  /**
+   * Returns whether the package will throw an error if it fails to find a translation. An alias for
+   * `throwOnFailure` getter
+   */
+  getThrowOnFailure() {
+    return this.throwOnFailure
+  }
+
+  /**
+   * Updates whether the package will throw an error if it fails to find a translation
+   */
+  set throwOnFailure(value) {
+    this.options.throwOnFailure = value ?? false
+  }
+
+  /**
+   * Updates whether the package will throw an error if it fails to find a translation. An alias for
+   * `throwOnFailure` setter
+   */
+  setThrowOnFailure(value: boolean | undefined) {
+    this.options.throwOnFailure = value
+  }
+
+
+  /**
    * Returns all the languages found in `localesPath`
    */
   getLanguages() {
@@ -274,7 +305,13 @@ export class I18n {
   __r<T>(key: string): T {
     this.preload()
 
-    return this.getTemplate(key, false) as T
+    const template = this.getTemplate(key, false) as T
+
+    if (this.throwOnFailure) {
+      throw new I18nError(`failed to get raw entity by key '${key}'`)
+    }
+
+    return template
   }
 
 
@@ -324,6 +361,10 @@ export class I18n {
       }
     }
 
+    if (this.throwOnFailure) {
+      throw new I18nError(`failed to render the template by keys ${actualKeys.join(', ')}`)
+    }
+
     return actualKeys[actualKeys.length - 1]
   }
 
@@ -360,6 +401,10 @@ export class I18n {
     const obj = this.__r<Record<string, any>>(key)
 
     if (obj === undefined) {
+      if (this.throwOnFailure) {
+        throw new I18nError(`failed to find the template by key '${key}'`)
+      }
+
       return key
     }
 
@@ -377,6 +422,10 @@ export class I18n {
     const template = templateByRule[rule] ?? obj.many ?? obj.other
 
     if (template === undefined) {
+      if (this.throwOnFailure) {
+        throw new I18nError(`failed to render the plural template by key '${key}'`)
+      }
+
       return key
     }
 
@@ -422,6 +471,10 @@ export class I18n {
       if (template !== key) {
         templates.push(this.render(template, scope))
       }
+    }
+
+    if (templates.length === 0 && this.throwOnFailure) {
+      throw new I18nError(`failed to get a list by key '${key}'`)
     }
 
     return templates

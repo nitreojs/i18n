@@ -62,6 +62,7 @@ const i18n = new I18n({
 
 // INFO: changing `currentLocale`
 i18n.locale = 'jp'
+i18n.locale = 'ru'
 
 // INFO: `i18n.__` is the same as `i18n.t`
 console.log(i18n.__('foo.bar.0.baz', { hello: 'world!' })) // "quix, world!", "<<hello>>" was replaced by "world!" 

@@ -63,6 +63,20 @@ export class I18n {
     )
   }
 
+  /**
+   * Creates `I18n` instance
+   */
+  static init(options: I18nOptions = {}) {
+    return new I18n(options)
+  }
+
+  /**
+   * Creates `I18n` instance
+   */
+  static create(options: I18nOptions = {}) {
+    return new I18n(options)
+  }
+
 
   private loadDictionaries() {
     if (this.localesPath === undefined) {

@@ -15,7 +15,7 @@
   "foo": {
     "bar": [
       {
-        "baz": "quix, <<hello>>"
+        "baz": "quix, {{hello}}"
       }
     ]
   },
@@ -38,45 +38,36 @@ import { resolve } from 'node:path'
 import { I18n } from '@starkow/i18n'
 
 const i18n = new I18n({
-  // INFO: path to *.json locale files
   localesPath: resolve(__dirname, 'locales'),
-  
-  // INFO: locale we will be using
   currentLocale: 'ru',
-  
-  // INFO: locale we'll use if `currentLocale` fails
-  defaultLocale: 'en',
-  
-  // INFO: tags for `micromustache` package, used in render templates
-  tags: ['<<', '>>'],
-  
-  // INFO: if `true`, throws an error when no translations are found
-  throwOnFailure: true,
-  
-  // INFO: this function is called whenever a file from `localesPath` is read
-  parser: (contents) => JSON.parse(contents),
-  
-  // INFO: a list of accepted file extensions
-  extensions: ['json']
+  defaultLocale: 'en'
 })
 
-// INFO: changing `currentLocale`
-i18n.locale = 'jp'
-i18n.locale = 'ru'
+console.log(i18n.__('foo.bar.0.baz', { hello: 'world!' })) // "quix, world!" 
 
-// INFO: `i18n.__` is the same as `i18n.t`
-console.log(i18n.__('foo.bar.0.baz', { hello: 'world!' })) // "quix, world!", "<<hello>>" was replaced by "world!" 
-
-// INFO: `i18n.__n` is the same as `i18n.plural`
 console.log(i18n.__n(1, 'declension.apple')) // "яблоко"
 console.log(i18n.__n(3, 'declension.apple')) // "яблока"
 console.log(i18n.__n(7, 'declension.apple')) // "яблок"
-
-// INFO: an example of `throwOnFailure` error throwing
-console.log(i18n.__('non-existent:key.that!will.throw.an.error')) // -> throws I18nError
 ```
 
 ## reference
+
+### `new I18n(options)`, `I18n.init(options)`, `I18n.create(options)`
+
+#### `options`
+
+> All of these options are **not required** _on initialization_, however `localesPath` and `currentLocale` are
+> **required** when getting a translation
+
+| key              | type               | description                                                                              |
+|------------------|--------------------|------------------------------------------------------------------------------------------|
+| `localesPath`    | `string`           | Path to locales                                                                          |
+| `defaultLocale`  | `string`           | Locale which will be used in case current locale was not found                           |
+| `currentLocale`  | `string`           | Current locale                                                                           |
+| `tags`           | `[string, string]` | Render templates tags                                                                    |
+| `throwOnFailure` | `boolean`          | Should the package throw an error if it fails to find a translation?                     |
+| `parser`         | `Parser`           | A function which is called when contents of a file are read                              |
+| `extensions`     | `string[]`         | List of accepted file extensions (or an empty one if all files extensions are accepted)  |
 
 ### `locale`
 

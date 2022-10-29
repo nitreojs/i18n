@@ -4,7 +4,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { I18nError } from './errors'
-import { MaybeArray } from './types/types'
+import { Either, MaybeArray } from './types/types'
 
 type Parser = (contents: string) => Record<string, any>
 
@@ -179,6 +179,10 @@ export class I18n {
     }
 
     if (this.dictionary === undefined && requireLocale) {
+      if (this.locale === undefined) {
+        throw new I18nError('`currentLocale` is not defined')
+      }
+
       this.loadDictionary()
     }
 
@@ -313,6 +317,31 @@ export class I18n {
     return this.languages
   }
 
+  /**
+   * Returns whether [keys] exist in context of current locale
+   * @param keys Locale keys to search for
+   */
+  exists<K extends MaybeArray<string>, R extends Either<K, boolean, boolean[]>>(keys: K): R {
+    this.preload()
+
+    const keysWereArray = Array.isArray(keys)
+
+    const actualKeys: string[] = keysWereArray ? keys : [keys]
+    const results: boolean[] = []
+
+    for (const key of actualKeys) {
+      const template = this.getTemplate(key)
+
+      results.push(template !== key)
+    }
+
+    if (keysWereArray) {
+      return results as R
+    }
+
+    return results[0] as R
+  }
+
 
   /**
    * Returns raw entity from the locale file. An alias for `__r`
@@ -377,16 +406,14 @@ export class I18n {
   __(keys: MaybeArray<string>, scope?: Scope) {
     this.preload()
 
-    const isInitiallyAnArray = Array.isArray(keys)
+    const isInitiallyArray = Array.isArray(keys)
 
-    const actualKeys: string[] = isInitiallyAnArray ? keys : [keys]
+    const actualKeys: string[] = isInitiallyArray ? keys : [keys]
 
-    for (let i = 0; i < actualKeys.length; i++) {
-      const key = actualKeys[i]
-
+    for (const key of actualKeys) {
       const template = this.getTemplate(key)
 
-      if (isInitiallyAnArray && template !== key) {
+      if (isInitiallyArray && template !== key) {
         return template as string
       }
 

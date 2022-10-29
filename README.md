@@ -149,6 +149,16 @@ Returns: `string[]`
 i18n.getLanguages()
 ```
 
+### `exists(keys: MaybeArray<string>)`
+
+> Returns whether [keys] exist in context of current locale
+
+Returns: `[keys] is array ? boolean[] : boolean`
+
+```ts
+i18n.exists(['foo', 'bar'])
+```
+
 ### `__r<T>(key: string)`
 
 > Returns raw entity from the locale file
@@ -161,7 +171,7 @@ Aliases: `r<T>(...)`, `raw<T>(...)`
 i18n.__r<string[]>('menu.purchase.buttons')
 ```
 
-### `__(key: MaybeArray<string>, scope?: Scope)`
+### `__(keys: MaybeArray<string>, scope?: Scope)`
 
 > Renders the template from the locale file
 

@@ -353,15 +353,6 @@ export class I18n {
   }
 
   /**
-   * Returns raw entity from the locale file. An alias for `__r`
-   * @param key Locale key
-   * @alias __r
-   */
-  raw<T>(key: string) {
-    return this.__r<T>(key)
-  }
-
-  /**
    * Returns raw entity from the locale file
    * @param key Locale key
    */
@@ -385,16 +376,6 @@ export class I18n {
    * @alias __
    */
   t(keys: MaybeArray<string>, scope?: Scope) {
-    return this.__(keys, scope)
-  }
-
-  /**
-   * Renders the template from the locale file. An alias for `__`
-   * @param keys String or an array of strings of translation keys
-   * @param scope Scope for variables
-   * @alias __
-   */
-  translate(keys: MaybeArray<string>, scope?: Scope) {
     return this.__(keys, scope)
   }
 
@@ -438,17 +419,6 @@ export class I18n {
    * @alias __n
    */
   p(count: number, key: string, scope?: Scope) {
-    return this.__n(count, key, scope)
-  }
-
-  /**
-   * Renders the plural template from the locale file. An alias for `__n`
-   * @param count Amount of something
-   * @param key Locale key
-   * @param scope Scope for variables
-   * @alias __n
-   */
-  plural(count: number, key: string, scope?: Scope) {
     return this.__n(count, key, scope)
   }
 
@@ -501,16 +471,6 @@ export class I18n {
    * @alias __l
    */
   l(key: string, scope?: Scope) {
-    return this.__l(key, scope)
-  }
-
-  /**
-   * Returns a list of all of translations for a given key in each locale. An alias for `__l`
-   * @param key Locales key
-   * @param scope Scope for variables
-   * @alias __l
-   */
-  list(key: string, scope?: Scope) {
     return this.__l(key, scope)
   }
 

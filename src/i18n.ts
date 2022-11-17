@@ -392,14 +392,10 @@ export class I18n {
     const actualKeys: string[] = isInitiallyArray ? keys : [keys]
 
     for (const key of actualKeys) {
-      const template = this.getTemplate(key)
-
-      if (isInitiallyArray && template !== key) {
-        return template as string
-      }
+      const template = this.getTemplate(key) as string
 
       if (template !== key) {
-        return template as string
+        return this.render(template, scope)
       }
     }
 
@@ -407,7 +403,7 @@ export class I18n {
       throw new I18nError(`failed to render the template by keys ${actualKeys.join(', ')}`)
     }
 
-    return actualKeys[actualKeys.length - 1]
+    return this.render(actualKeys[actualKeys.length - 1], scope)
   }
 
 

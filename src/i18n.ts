@@ -395,7 +395,7 @@ export class I18n {
       const template = this.getTemplate(key) as string
 
       if (template !== key) {
-        return this.render(template, scope)
+        return this.render(template, scope).trim()
       }
     }
 
@@ -403,7 +403,7 @@ export class I18n {
       throw new I18nError(`failed to render the template by keys ${actualKeys.join(', ')}`)
     }
 
-    return this.render(actualKeys[actualKeys.length - 1], scope)
+    return this.render(actualKeys[actualKeys.length - 1], scope).trim()
   }
 
 

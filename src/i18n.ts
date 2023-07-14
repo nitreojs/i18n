@@ -61,6 +61,10 @@ export class I18n {
         tags: this.options.tags ?? ['{{', '}}']
       })
     )
+
+    if (this.options.localesPath !== undefined) {
+      this.loadDictionaries()
+    }
   }
 
   /**
@@ -82,6 +86,8 @@ export class I18n {
     if (this.localesPath === undefined) {
       throw new I18nError('`localesPath` is not defined')
     }
+
+    this.languages = []
 
     const files = readdirSync(this.localesPath)
       .filter(
@@ -247,6 +253,8 @@ export class I18n {
     this.options.localesPath = path
 
     this.loadDictionaries()
+
+    this.dictionary = undefined
   }
 
 

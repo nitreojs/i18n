@@ -20,6 +20,10 @@ interface I18nOptions {
    */
   defaultLocale?: string
   /**
+   * Locale which will be used in case no translations found using `currentLocale`
+   */
+  fallbackLocale?: string
+  /**
    * Current locale
    */
   currentLocale?: string
@@ -166,7 +170,11 @@ export class I18n {
       return this.lookup(dictionary, key, failOnNonString)
     }
 
-    const template = dictionary[key]
+    let template = dictionary[key]
+
+    if (template === undefined && this.fallbackLocale !== undefined) {
+      template = this.dictionaries![this.fallbackLocale][key]
+    }
 
     if (template === undefined) {
       return key
@@ -215,6 +223,22 @@ export class I18n {
     if (this.dictionaries !== undefined) {
       this.loadDictionary()
     }
+  }
+
+
+  /**
+   * Returns fallback locale
+   */
+  get fallbackLocale() {
+    return this.options.fallbackLocale
+  }
+
+  /**
+   * Updates fallback locale
+   * @param locale New fallback locale
+   */
+  set fallbackLocale(locale) {
+    this.options.fallbackLocale = locale
   }
 
 

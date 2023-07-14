@@ -63,6 +63,7 @@ console.log(i18n.__n(7, 'declension.apple')) // "яблок"
 |------------------|--------------------|------------------------------------------------------------------------------------------|
 | `localesPath`    | `string`           | Path to locales                                                                          |
 | `defaultLocale`  | `string`           | Locale which will be used in case current locale was not found                           |
+| `fallbackLocale` | `string`           | Locale which will be used in case no translations found using `currentLocale`            |
 | `currentLocale`  | `string`           | Current locale                                                                           |
 | `tags`           | `[string, string]` | Render templates tags                                                                    |
 | `throwOnFailure` | `boolean`          | Should the package throw an error if it fails to find a translation?                     |
@@ -87,6 +88,16 @@ Returns: `string | undefined`
 
 ```js
 i18n.defaultLocale
+```
+
+### `fallbackLocale`
+
+> Returns fallback locale - a locale which will be used when a translation using `locale` was not found
+
+Returns: `string | undefined`
+
+```js
+i18n.fallbackLocale
 ```
 
 ### `localesPath`

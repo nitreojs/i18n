@@ -1,6 +1,6 @@
 {
   "name": "@starkow/i18n",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "simple yet effective i18n package",
   "main": "./lib/index.js",
   "scripts": {

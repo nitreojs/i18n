@@ -393,7 +393,7 @@ export class I18n {
 
     const template = this.getTemplate(key, false) as T
 
-    if (this.throwOnFailure) {
+    if (this.throwOnFailure && template === key) {
       throw new I18nError(`failed to get raw entity by key '${key}'`)
     }
 

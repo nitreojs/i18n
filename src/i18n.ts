@@ -60,11 +60,21 @@ export class I18n {
       throw new I18nError('`tags` should consist of exactly two strings')
     }
 
-    this.render = (template: string, scope?: Scope) => (
-      render(template, scope, {
-        tags: this.options.tags ?? ['{{', '}}']
+    this.render = (template: string, scope?: Scope) => {
+      const preprocessed = template.replace(/\{\{#(.+?)\}\}/g, (match, key) => {
+        const value = this.getTemplate(key)
+        
+        if (value === undefined) {
+          return ''
+        }
+
+        return value
       })
-    )
+
+      return render(preprocessed, scope, {
+        tags: ['{{', '}}']
+      })
+    }
 
     if (this.options.localesPath !== undefined) {
       this.loadDictionaries()

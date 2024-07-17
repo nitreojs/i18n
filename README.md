@@ -12,6 +12,7 @@
 
 ```json
 {
+  "hello": "Привет, мир!"
   "foo": {
     "bar": [
       {
@@ -19,6 +20,7 @@
       }
     ]
   },
+  "inline": "This translation uses another inline translation: \"{{#hello}}\".",
   "declensions": {
     "apple": {
       "one": "яблоко",
@@ -44,6 +46,7 @@ const i18n = new I18n({
 })
 
 console.log(i18n.__('foo.bar.0.baz', { hello: 'world!' })) // "quix, world!" 
+console.log(i18n.__('inline')) // This translation uses another inline translation: "Привет, мир!".
 
 console.log(i18n.__n(1, 'declension.apple')) // "яблоко"
 console.log(i18n.__n(3, 'declension.apple')) // "яблока"

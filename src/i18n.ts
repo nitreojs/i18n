@@ -10,6 +10,8 @@ type Parser = (contents: string) => Record<string, any>
 
 const defaultParser: Parser = (contents: string) => JSON.parse(contents)
 
+const escapeRe = (data: string) => data.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 interface I18nOptions {
   /**
    * Path to locales
@@ -43,6 +45,12 @@ interface I18nOptions {
    * List of accepted file extensions (or an empty one if all files extensions are accepted)
    */
   extensions?: string[]
+  /**
+   * A symbol resembling an anchor to the other translation in the current locale.
+   * 
+   * @default '#'
+   */
+  anchor?: string
 }
 
 /**
@@ -60,20 +68,37 @@ export class I18n {
       throw new I18nError('`tags` should consist of exactly two strings')
     }
 
+    const tags = this.options.tags ?? ['{{', '}}']
+    const anchor = this.options.anchor ?? '#'
+
+    if (anchor.length !== 1) {
+      throw new I18nError('`anchor` should consist of exactly one character')
+    }
+
+    const escapedTags = tags.map(escapeRe)
+    const escapedAnchor = escapeRe(anchor)
+
     this.render = (template: string, scope?: Scope) => {
-      const preprocessed = template.replace(/\{\{#(.+?)\}\}/g, (match, key) => {
+      // funny variable names
+      const re = `${escapedTags[0]}\\s*${escapedAnchor}(.+?)\\s*${escapedTags[1]}`
+      const  Re = new RegExp(re)
+      const gRe = new RegExp(re, 'g')
+
+      const preprocessed = template.replace(gRe, (match, key) => {
         const value = this.getTemplate(key)
-        
-        if (value === undefined) {
+
+        if (value === key) {
           return ''
         }
 
         return value
       })
 
-      return render(preprocessed, scope, {
-        tags: ['{{', '}}']
-      })
+      if (Re.test(preprocessed)) {
+        return this.render(preprocessed, scope)
+      }
+
+      return render(preprocessed, scope, { tags })
     }
 
     if (this.options.localesPath !== undefined) {
@@ -349,6 +374,20 @@ export class I18n {
    */
   set extensions(extensions) {
     this.options.extensions = extensions
+  }
+
+  /**
+   * Returns a symbol resembling an anchor to the other translation in the current locale
+   */
+  get anchor () {
+    return this.options.anchor ?? '#'
+  }
+
+  /**
+   * Updates a symbol resembling an anchor to the other translation in the current locale
+   */
+  set anchor (anchor) {
+    this.options.anchor = anchor
   }
 
 

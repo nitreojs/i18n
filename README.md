@@ -72,6 +72,7 @@ console.log(i18n.__n(7, 'declension.apple')) // "яблок"
 | `throwOnFailure` | `boolean`          | Should the package throw an error if it fails to find a translation?                     |
 | `parser`         | `Parser`           | A function which is called when contents of a file are read                              |
 | `extensions`     | `string[]`         | List of accepted file extensions (or an empty one if all files extensions are accepted)  |
+| `anchor`         | `string`           | A symbol resembling an anchor to the other translation in the current locale.            |
 
 ### `locale`
 
@@ -151,6 +152,16 @@ Returns: `string[]`
 
 ```ts
 i18n.extension = ['json']
+```
+
+### `anchor`
+
+> Returns a symbol resembling an anchor to the other translation in the current locale
+
+Returns: `string`
+
+```ts
+i18n.anchor = '@'
 ```
 
 ### `getLanguages()`

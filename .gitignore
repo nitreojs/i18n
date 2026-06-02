@@ -52,3 +52,4 @@ dist
 .pnp.*
 .idea
 lib
+.docs

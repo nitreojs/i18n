@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 import { DEFAULT_ANCHOR, DEFAULT_TAGS } from './constants.js'
 import { I18nError } from './errors/index.js'
 import { Either, MaybeArray } from './types/types.js'
-import { escapeRegExp, lookup } from './utils/index.js'
+import { escapeRegExp, lookup, selectPluralTemplate } from './utils/index.js'
 
 type Parser = (contents: string) => Record<string, any>
 
@@ -493,10 +493,10 @@ export class I18n {
    * @param key Locale key
    * @param scope Scope for variables
    */
-  __n(count: number, key: string, scope?: Scope) {
+  __n (count: number, key: string, scope?: Scope) {
     const obj = this.__r<Record<string, any>>(key)
 
-    if (obj === undefined) {
+    if (obj === undefined || typeof obj !== 'object') {
       if (this.throwOnFailure) {
         throw new I18nError(`failed to find the template by key '${key}'`)
       }
@@ -504,18 +504,7 @@ export class I18n {
       return key
     }
 
-    // INFO: why ar-EG? because this locale returns the most amount of rules possible and thus is good for our task
-    const pr = new Intl.PluralRules('ar-EG')
-    const rule = pr.select(count)
-
-    const templateByRule: Partial<Record<typeof rule, any>> = {
-      zero: obj.zero ?? obj.other ?? obj.many,
-      one: obj.one ?? obj.other,
-      two: obj.two ?? obj.few ?? obj.many,
-      few: obj.few ?? obj.many,
-    }
-
-    const template = templateByRule[rule] ?? obj.many ?? obj.other
+    const template = selectPluralTemplate(obj, count, this.locale as string)
 
     if (template === undefined) {
       if (this.throwOnFailure) {
@@ -525,7 +514,7 @@ export class I18n {
       return key
     }
 
-    return this.render(template, scope)
+    return this.render(template, { count, ...scope })
   }
 
 

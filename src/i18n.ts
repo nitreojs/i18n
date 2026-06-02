@@ -3,14 +3,14 @@ import { render, Scope } from 'micromustache'
 import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
+import { DEFAULT_ANCHOR, DEFAULT_TAGS } from './constants.js'
 import { I18nError } from './errors/index.js'
 import { Either, MaybeArray } from './types/types.js'
+import { escapeRegExp } from './utils/index.js'
 
 type Parser = (contents: string) => Record<string, any>
 
 const defaultParser: Parser = (contents: string) => JSON.parse(contents)
-
-const escapeRe = (data: string) => data.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 interface I18nOptions {
   /**
@@ -68,15 +68,15 @@ export class I18n {
       throw new I18nError('`tags` should consist of exactly two strings')
     }
 
-    const tags = this.options.tags ?? ['{{', '}}']
-    const anchor = this.options.anchor ?? '#'
+    const tags = this.options.tags ?? DEFAULT_TAGS
+    const anchor = this.options.anchor ?? DEFAULT_ANCHOR
 
     if (anchor.length !== 1) {
       throw new I18nError('`anchor` should consist of exactly one character')
     }
 
-    const escapedTags = tags.map(escapeRe)
-    const escapedAnchor = escapeRe(anchor)
+    const escapedTags = tags.map(escapeRegExp)
+    const escapedAnchor = escapeRegExp(anchor)
 
     this.render = (template: string, scope?: Scope) => {
       // funny variable names
@@ -321,7 +321,7 @@ export class I18n {
    * Returns a list of render templates tags
    */
   get tags() {
-    return this.options.tags ?? ['{{', '}}']
+    return this.options.tags ?? DEFAULT_TAGS
   }
 
   /**
@@ -380,7 +380,7 @@ export class I18n {
    * Returns a symbol resembling an anchor to the other translation in the current locale
    */
   get anchor () {
-    return this.options.anchor ?? '#'
+    return this.options.anchor ?? DEFAULT_ANCHOR
   }
 
   /**

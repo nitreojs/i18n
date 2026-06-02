@@ -13,6 +13,9 @@ export interface ScopedTranslator<T> {
   p (count: number, key: Key<T>, scope?: Scope): string
   __n (count: number, key: Key<T>, scope?: Scope): string
   plural (count: number, key: Key<T>, scope?: Scope): string
+  l (key: Key<T>, scope?: Scope): string[]
+  __l (key: Key<T>, scope?: Scope): string[]
+  list (key: Key<T>, scope?: Scope): string[]
   exists <K extends MaybeArray<Key<T>>> (keys: K): K extends readonly any[] ? boolean[] : boolean
   scope <P extends Key<T>> (prefix: P): ScopedTranslator<PathValue<T, P>>
 }
@@ -32,6 +35,9 @@ export const createScope = <Parent, T> (i18n: I18n<Parent>, prefix: string): Sco
     p: (count, k, scope) => i18n.p(count, key(k as any) as any, scope),
     __n: (count, k, scope) => i18n.__n(count, key(k as any) as any, scope),
     plural: (count, k, scope) => i18n.p(count, key(k as any) as any, scope),
+    l: (k, scope) => i18n.l(key(k as any) as any, scope),
+    __l: (k, scope) => i18n.__l(key(k as any) as any, scope),
+    list: (k, scope) => i18n.l(key(k as any) as any, scope),
     exists: (k) => i18n.exists(keys(k as any)) as any,
     scope: (nested) => createScope(i18n, key(nested as any))
   }

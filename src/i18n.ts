@@ -428,6 +428,10 @@ export class I18n<T = unknown> {
     return this.__r<K>(key)
   }
 
+  raw<K extends Key<T>> (key: K): RawValue<T, K> {
+    return this.__r<K>(key)
+  }
+
   /**
    * Returns raw entity from the locale file
    * @param key Locale key
@@ -460,6 +464,10 @@ export class I18n<T = unknown> {
    * @alias __
    */
   t (keys: MaybeArray<Key<T>>, scope?: Scope) {
+    return this.__(keys, scope)
+  }
+
+  translate (keys: MaybeArray<Key<T>>, scope?: Scope) {
     return this.__(keys, scope)
   }
 
@@ -508,6 +516,10 @@ export class I18n<T = unknown> {
     return this.__n(count, key, scope)
   }
 
+  plural (count: number, key: Key<T>, scope?: Scope) {
+    return this.__n(count, key, scope)
+  }
+
   /**
    * Renders the plural template from the locale file
    * @param count Amount of something
@@ -548,6 +560,10 @@ export class I18n<T = unknown> {
    * @alias __l
    */
   l (key: Key<T>, scope?: Scope) {
+    return this.__l(key, scope)
+  }
+
+  list (key: Key<T>, scope?: Scope) {
     return this.__l(key, scope)
   }
 

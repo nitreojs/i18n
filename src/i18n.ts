@@ -1,15 +1,11 @@
 import { Scope } from 'micromustache'
 
-import { readdirSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-
 import { DEFAULT_ANCHOR, DEFAULT_MAX_ANCHOR_DEPTH, DEFAULT_TAGS } from './constants.js'
 import { I18nError } from './errors/index.js'
+import { loadDictionariesAsync, loadDictionariesSync, Parser } from './loader.js'
 import { Either, MaybeArray } from './types/types.js'
 import { lookup, selectPluralTemplate } from './utils/index.js'
 import { Renderer } from './renderer.js'
-
-type Parser = (contents: string) => Record<string, any>
 
 const defaultParser: Parser = (contents: string) => JSON.parse(contents)
 
@@ -100,50 +96,27 @@ export class I18n {
     return new I18n(options)
   }
 
+  static async load (options: I18nOptions = {}) {
+    const i18n = new I18n({ ...options, localesPath: undefined })
 
-  private loadDictionaries() {
+    i18n.options.localesPath = options.localesPath
+
+    if (options.localesPath !== undefined) {
+      await i18n.reload()
+    }
+
+    return i18n
+  }
+
+  private loadDictionaries () {
     if (this.localesPath === undefined) {
       throw new I18nError('`localesPath` is not defined')
     }
 
-    this.languages = []
-
-    const files = readdirSync(this.localesPath)
-      .filter(
-        (file) => (
-          this.extensions.length === 0
-            ? true
-            : this.extensions.includes(
-                file.slice(file.lastIndexOf('.') + 1)
-              )
-        )
-      )
-
-    const dictionaries = files.reduce(
-      (acc, path) => {
-        const key = path.split('.')[0]
-
-        if (!this.languages.includes(key)) {
-          this.languages.push(key)
-        }
-
-        acc[key] = this.parser(
-          readFileSync(
-            resolve(this.localesPath as string, path),
-            'utf8'
-          )
-        )
-
-        return acc
-      },
-      {} as Record<string, any>
-    )
-
-    if (Object.keys(dictionaries).length === 0) {
-      throw new I18nError('zero dictionaries found')
-    }
+    const { dictionaries, languages } = loadDictionariesSync(this.localesPath, this.extensions, this.parser)
 
     this.dictionaries = dictionaries
+    this.languages = languages
   }
 
   private loadDictionary() {
@@ -379,6 +352,22 @@ export class I18n {
    */
   getLanguages() {
     return this.languages
+  }
+
+  async reload () {
+    if (this.localesPath === undefined) {
+      throw new I18nError('`localesPath` is not defined')
+    }
+
+    const { dictionaries, languages } = await loadDictionariesAsync(this.localesPath, this.extensions, this.parser)
+
+    this.dictionaries = dictionaries
+    this.languages = languages
+    this.dictionary = undefined
+
+    if (this.locale !== undefined) {
+      this.loadDictionary()
+    }
   }
 
   /**

@@ -3,8 +3,8 @@ import { render, Scope } from 'micromustache'
 import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { I18nError } from './errors'
-import { Either, MaybeArray } from './types/types'
+import { I18nError } from './errors/index.js'
+import { Either, MaybeArray } from './types/types.js'
 
 type Parser = (contents: string) => Record<string, any>
 

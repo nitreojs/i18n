@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 import { DEFAULT_ANCHOR, DEFAULT_TAGS } from './constants.js'
 import { I18nError } from './errors/index.js'
 import { Either, MaybeArray } from './types/types.js'
-import { escapeRegExp } from './utils/index.js'
+import { escapeRegExp, lookup } from './utils/index.js'
 
 type Parser = (contents: string) => Record<string, any>
 
@@ -159,7 +159,7 @@ export class I18n {
       {} as Record<string, any>
     )
 
-    if (dictionaries.length === 0) {
+    if (Object.keys(dictionaries).length === 0) {
       throw new I18nError('zero dictionaries found')
     }
 
@@ -178,37 +178,25 @@ export class I18n {
     this.dictionary = dictionary
   }
 
-  private lookup(object: Record<string, any>, path: string, failOnNonString: boolean) {
-    const keys = path.split('.')
-
-    let result: any = { ...object }
-
-    for (const key of keys) {
-      result = result[key]
-
-      if (result === undefined) {
-        result = path
-
-        break
-      }
-    }
-
-    if (typeof result !== 'string' && failOnNonString) {
-      throw new I18nError(`failed to lookup for '${path}': the result is not a string`)
-    }
-
-    return result
-  }
-
-  private getTemplate(key: string, failOnNonString = true, dictionary = this.dictionary!) {
+  private getTemplate (key: string, failOnNonString = true, dictionary = this.dictionary!) {
     if (key.includes('.')) {
-      return this.lookup(dictionary, key, failOnNonString)
+      const { value, found } = lookup(dictionary, key)
+
+      if (!found) {
+        return key
+      }
+
+      if (typeof value !== 'string' && failOnNonString) {
+        throw new I18nError(`failed to lookup for '${key}': the result is not a string`)
+      }
+
+      return value
     }
 
     let template = dictionary[key]
 
     if (template === undefined && this.fallbackLocale !== undefined) {
-      template = this.dictionaries![this.fallbackLocale][key]
+      template = this.dictionaries![this.fallbackLocale as string]?.[key]
     }
 
     if (template === undefined) {

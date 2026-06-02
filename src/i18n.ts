@@ -2,62 +2,17 @@ import { Scope } from 'micromustache'
 
 import { DEFAULT_ANCHOR, DEFAULT_MAX_ANCHOR_DEPTH, DEFAULT_TAGS } from './constants.js'
 import { I18nError } from './errors/index.js'
+import { I18nOptions, Key, MaybeArray, RawValue } from './types/index.js'
 import { loadDictionariesAsync, loadDictionariesSync, Parser } from './loader.js'
-import { Either, MaybeArray } from './types/types.js'
 import { lookup, selectPluralTemplate } from './utils/index.js'
 import { Renderer } from './renderer.js'
 
 const defaultParser: Parser = (contents: string) => JSON.parse(contents)
 
-interface I18nOptions {
-  /**
-   * Path to locales
-   */
-  localesPath?: string
-  /**
-   * Locale which will be used in case current locale was not found
-   */
-  defaultLocale?: string
-  /**
-   * Locale which will be used in case no translations found using `currentLocale`
-   */
-  fallbackLocale?: string
-  /**
-   * Current locale
-   */
-  currentLocale?: string
-  /**
-   * Render templates tags
-   */
-  tags?: [string, string]
-  /**
-   * Should the package throw an error if it fails to find a translation?
-   */
-  throwOnFailure?: boolean
-  /**
-   * A function which is called when contents of a file are read
-   */
-  parser?: Parser
-  /**
-   * List of accepted file extensions (or an empty one if all files extensions are accepted)
-   */
-  extensions?: string[]
-  /**
-   * A symbol resembling an anchor to the other translation in the current locale.
-   *
-   * @default '#'
-   */
-  anchor?: string
-  /**
-   * Maximum inline-anchor resolution depth before throwing (guards against circular anchors)
-   */
-  maxAnchorDepth?: number
-}
-
 /**
  * Main I18n class
  */
-export class I18n {
+export class I18n<T = unknown> {
   private renderer!: Renderer
 
   private dictionaries: Record<string, any> | undefined
@@ -85,19 +40,19 @@ export class I18n {
   /**
    * Creates `I18n` instance
    */
-  static init(options: I18nOptions = {}) {
-    return new I18n(options)
+  static init<T = unknown> (options: I18nOptions = {}) {
+    return new I18n<T>(options)
   }
 
   /**
    * Creates `I18n` instance
    */
-  static create(options: I18nOptions = {}) {
-    return new I18n(options)
+  static create<T = unknown> (options: I18nOptions = {}) {
+    return new I18n<T>(options)
   }
 
-  static async load (options: I18nOptions = {}) {
-    const i18n = new I18n({ ...options, localesPath: undefined })
+  static async load<T = unknown> (options: I18nOptions = {}) {
+    const i18n = new I18n<T>({ ...options, localesPath: undefined })
 
     i18n.options.localesPath = options.localesPath
 
@@ -374,7 +329,7 @@ export class I18n {
    * Returns whether [keys] exist in context of current locale
    * @param keys Locale keys to search for
    */
-  exists<K extends MaybeArray<string>, R extends Either<K, boolean, boolean[]>>(keys: K): R {
+  exists<K extends MaybeArray<Key<T>>> (keys: K): K extends readonly any[] ? boolean[] : boolean {
     this.preload()
 
     const keysWereArray = Array.isArray(keys)
@@ -389,10 +344,10 @@ export class I18n {
     }
 
     if (keysWereArray) {
-      return results as R
+      return results as any
     }
 
-    return results[0] as R
+    return results[0] as any
   }
 
 
@@ -401,24 +356,24 @@ export class I18n {
    * @param key Locale key
    * @alias __r
    */
-  r<T>(key: string) {
-    return this.__r<T>(key)
+  r<K extends Key<T>> (key: K): RawValue<T, K> {
+    return this.__r<K>(key)
   }
 
   /**
    * Returns raw entity from the locale file
    * @param key Locale key
    */
-  __r<T>(key: string): T {
+  __r<K extends Key<T>> (key: K): RawValue<T, K> {
     this.preload()
 
-    const template = this.getTemplate(key, false) as T
+    const template = this.getTemplate(key as string, false)
 
     if (this.throwOnFailure && template === key) {
       throw new I18nError(`failed to get raw entity by key '${key}'`)
     }
 
-    return template
+    return template as RawValue<T, K>
   }
 
 
@@ -428,7 +383,7 @@ export class I18n {
    * @param scope Scope for variables
    * @alias __
    */
-  t(keys: MaybeArray<string>, scope?: Scope) {
+  t (keys: MaybeArray<Key<T>>, scope?: Scope) {
     return this.__(keys, scope)
   }
 
@@ -437,12 +392,12 @@ export class I18n {
    * @param keys String or an array of strings of translation keys
    * @param scope Scope for variables
    */
-  __(keys: MaybeArray<string>, scope?: Scope) {
+  __ (keys: MaybeArray<Key<T>>, scope?: Scope) {
     this.preload()
 
     const isInitiallyArray = Array.isArray(keys)
 
-    const actualKeys: string[] = isInitiallyArray ? keys : [keys]
+    const actualKeys: string[] = isInitiallyArray ? keys as string[] : [keys as string]
 
     for (const key of actualKeys) {
       const template = this.getTemplate(key) as string
@@ -467,7 +422,7 @@ export class I18n {
    * @param scope Scope for variables
    * @alias __n
    */
-  p(count: number, key: string, scope?: Scope) {
+  p (count: number, key: Key<T>, scope?: Scope) {
     return this.__n(count, key, scope)
   }
 
@@ -477,8 +432,8 @@ export class I18n {
    * @param key Locale key
    * @param scope Scope for variables
    */
-  __n (count: number, key: string, scope?: Scope) {
-    const obj = this.__r<Record<string, any>>(key)
+  __n (count: number, key: Key<T>, scope?: Scope) {
+    const obj = this.__r(key) as unknown as Record<string, any>
 
     if (obj === undefined || typeof obj !== 'object') {
       if (this.throwOnFailure) {
@@ -508,7 +463,7 @@ export class I18n {
    * @param scope Scope for variables
    * @alias __l
    */
-  l(key: string, scope?: Scope) {
+  l (key: Key<T>, scope?: Scope) {
     return this.__l(key, scope)
   }
 
@@ -517,7 +472,7 @@ export class I18n {
    * @param key Locales key
    * @param scope Scope for variables
    */
-  __l(key: string, scope?: Scope) {
+  __l (key: Key<T>, scope?: Scope) {
     this.preload(false)
 
     const templates: string[] = []
@@ -525,7 +480,7 @@ export class I18n {
     for (const language of this.languages) {
       const dictionary = this.dictionaries![language]
 
-      const template = this.getTemplate(key, true, dictionary)
+      const template = this.getTemplate(key as string, true, dictionary)
 
       if (template !== key) {
         templates.push(this.render(template, scope))

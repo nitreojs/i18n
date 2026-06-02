@@ -9,6 +9,7 @@ simple yet effective i18n package
 - **esm-only**: Node ≥20.11, `import` only — `require()` is not supported.
 - **pluralization**: the plural category is now selected by `Intl.PluralRules(currentLocale)`, matching CLDR rules for the *target* locale. For many counts the output differs from v2 (e.g. Russian 21→`one`, not `many`).
 - **dotted key fallback**: missing dotted keys now walk the full fallback chain instead of failing immediately.
+- **`__r` / `r` typing**: the generic is now the key (`__r<K extends keyof keys>(key: K)`) returning the inferred value type, so the old explicit-return form `__r<string[]>('menu.buttons')` no longer compiles — drop the type argument and let it infer, or cast the result. on untyped instances `__r('x')` returns `any`, so no cast is needed.
 
 ---
 

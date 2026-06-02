@@ -77,9 +77,9 @@ export class I18n<T = unknown> {
   }
 
   private loadDictionary () {
-    const dictionary: Record<string, any> =
-      this.dictionaries![this.locale as string] ??
-      this.dictionaries![this.defaultLocale as string]
+    const dictionary = this.localeChain()
+      .map((locale) => this.dictionaries?.[locale])
+      .find(Boolean)
 
     if (dictionary === undefined) {
       throw new I18nError(`could not find '${this.locale}' dictionary (default: ${this.defaultLocale ?? '[not set]'})`)

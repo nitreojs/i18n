@@ -2,7 +2,9 @@ import { Scope } from 'micromustache'
 
 import { DEFAULT_ANCHOR, DEFAULT_MAX_ANCHOR_DEPTH, DEFAULT_TAGS } from './constants.js'
 import { I18nError } from './errors/index.js'
-import { I18nOptions, Key, MaybeArray, RawValue } from './types/index.js'
+import { I18nOptions, Key, MaybeArray, PathValue, RawValue } from './types/index.js'
+import { createScope } from './scope.js'
+import type { ScopedTranslator } from './scope.js'
 import { loadDictionariesAsync, loadDictionariesSync, Parser } from './loader.js'
 import { lookup, selectPluralTemplate } from './utils/index.js'
 import { Renderer } from './renderer.js'
@@ -369,6 +371,10 @@ export class I18n<T = unknown> {
    */
   getLanguages() {
     return this.languages
+  }
+
+  scope<P extends Key<T>> (prefix: P): ScopedTranslator<PathValue<T, P>> {
+    return createScope<T, PathValue<T, P>>(this, prefix as string)
   }
 
   async reload () {

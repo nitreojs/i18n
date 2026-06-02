@@ -1,0 +1,14 @@
+{
+  "greeting": "Привет, {{name}}!",
+  "nav": {
+    "home": "Главная",
+    "settings": "Настройки"
+  },
+  "welcome": "{{#greeting}} Рады видеть вас.",
+  "apple": {
+    "one": "{{count}} яблоко",
+    "few": "{{count}} яблока",
+    "many": "{{count}} яблок",
+    "other": "{{count}} яблоки"
+  }
+}

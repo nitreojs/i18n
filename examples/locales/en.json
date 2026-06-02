@@ -1,0 +1,13 @@
+{
+  "greeting": "Hello, {{name}}!",
+  "nav": {
+    "home": "Home",
+    "settings": "Settings"
+  },
+  "welcome": "{{#greeting}} Glad to see you.",
+  "apple": {
+    "one": "{{count}} apple",
+    "other": "{{count}} apples"
+  },
+  "footer": "© {{year}} Acme"
+}

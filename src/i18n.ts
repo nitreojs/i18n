@@ -1,63 +1,21 @@
-import { render, Scope } from 'micromustache'
+import { Scope } from 'micromustache'
 
-import { readdirSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-
-import { I18nError } from './errors'
-import { Either, MaybeArray } from './types/types'
-
-type Parser = (contents: string) => Record<string, any>
+import { DEFAULT_ANCHOR, DEFAULT_MAX_ANCHOR_DEPTH, DEFAULT_TAGS } from './constants.js'
+import { I18nError } from './errors/index.js'
+import { I18nOptions, Key, MaybeArray, PathValue, RawValue } from './types/index.js'
+import { createScope } from './scope.js'
+import type { ScopedTranslator } from './scope.js'
+import { loadDictionariesAsync, loadDictionariesSync, Parser } from './loader.js'
+import { lookup, selectPluralTemplate } from './utils/index.js'
+import { Renderer } from './renderer.js'
 
 const defaultParser: Parser = (contents: string) => JSON.parse(contents)
-
-const escapeRe = (data: string) => data.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-interface I18nOptions {
-  /**
-   * Path to locales
-   */
-  localesPath?: string
-  /**
-   * Locale which will be used in case current locale was not found
-   */
-  defaultLocale?: string
-  /**
-   * Locale which will be used in case no translations found using `currentLocale`
-   */
-  fallbackLocale?: string
-  /**
-   * Current locale
-   */
-  currentLocale?: string
-  /**
-   * Render templates tags
-   */
-  tags?: [string, string]
-  /**
-   * Should the package throw an error if it fails to find a translation?
-   */
-  throwOnFailure?: boolean
-  /**
-   * A function which is called when contents of a file are read
-   */
-  parser?: Parser
-  /**
-   * List of accepted file extensions (or an empty one if all files extensions are accepted)
-   */
-  extensions?: string[]
-  /**
-   * A symbol resembling an anchor to the other translation in the current locale.
-   * 
-   * @default '#'
-   */
-  anchor?: string
-}
 
 /**
  * Main I18n class
  */
-export class I18n {
-  private readonly render: (template: string, scope?: Scope) => string
+export class I18n<T = unknown> {
+  private renderer!: Renderer
 
   private dictionaries: Record<string, any> | undefined
   private dictionary: Record<string, any> | undefined
@@ -68,38 +26,13 @@ export class I18n {
       throw new I18nError('`tags` should consist of exactly two strings')
     }
 
-    const tags = this.options.tags ?? ['{{', '}}']
-    const anchor = this.options.anchor ?? '#'
+    const anchor = this.options.anchor ?? DEFAULT_ANCHOR
 
     if (anchor.length !== 1) {
       throw new I18nError('`anchor` should consist of exactly one character')
     }
 
-    const escapedTags = tags.map(escapeRe)
-    const escapedAnchor = escapeRe(anchor)
-
-    this.render = (template: string, scope?: Scope) => {
-      // funny variable names
-      const re = `${escapedTags[0]}\\s*${escapedAnchor}(.+?)\\s*${escapedTags[1]}`
-      const  Re = new RegExp(re)
-      const gRe = new RegExp(re, 'g')
-
-      const preprocessed = template.replace(gRe, (match, key) => {
-        const value = this.getTemplate(key)
-
-        if (value === key) {
-          return ''
-        }
-
-        return value
-      })
-
-      if (Re.test(preprocessed)) {
-        return this.render(preprocessed, scope)
-      }
-
-      return render(preprocessed, scope, { tags })
-    }
+    this.rebuildRenderer()
 
     if (this.options.localesPath !== undefined) {
       this.loadDictionaries()
@@ -109,67 +42,44 @@ export class I18n {
   /**
    * Creates `I18n` instance
    */
-  static init(options: I18nOptions = {}) {
-    return new I18n(options)
+  static init<T = unknown> (options: I18nOptions = {}) {
+    return new I18n<T>(options)
   }
 
   /**
    * Creates `I18n` instance
    */
-  static create(options: I18nOptions = {}) {
-    return new I18n(options)
+  static create<T = unknown> (options: I18nOptions = {}) {
+    return new I18n<T>(options)
   }
 
+  static async load<T = unknown> (options: I18nOptions = {}) {
+    const i18n = new I18n<T>({ ...options, localesPath: undefined })
 
-  private loadDictionaries() {
+    i18n.options.localesPath = options.localesPath
+
+    if (options.localesPath !== undefined) {
+      await i18n.reload()
+    }
+
+    return i18n
+  }
+
+  private loadDictionaries () {
     if (this.localesPath === undefined) {
       throw new I18nError('`localesPath` is not defined')
     }
 
-    this.languages = []
-
-    const files = readdirSync(this.localesPath)
-      .filter(
-        (file) => (
-          this.extensions.length === 0
-            ? true
-            : this.extensions.includes(
-                file.slice(file.lastIndexOf('.') + 1)
-              )
-        )
-      )
-
-    const dictionaries = files.reduce(
-      (acc, path) => {
-        const key = path.split('.')[0]
-
-        if (!this.languages.includes(key)) {
-          this.languages.push(key)
-        }
-
-        acc[key] = this.parser(
-          readFileSync(
-            resolve(this.localesPath as string, path),
-            'utf8'
-          )
-        )
-
-        return acc
-      },
-      {} as Record<string, any>
-    )
-
-    if (dictionaries.length === 0) {
-      throw new I18nError('zero dictionaries found')
-    }
+    const { dictionaries, languages } = loadDictionariesSync(this.localesPath, this.extensions, this.parser)
 
     this.dictionaries = dictionaries
+    this.languages = languages
   }
 
-  private loadDictionary() {
-    const dictionary: Record<string, any> =
-      this.dictionaries![this.locale as string] ??
-      this.dictionaries![this.defaultLocale as string]
+  private loadDictionary () {
+    const dictionary = this.localeChain()
+      .map((locale) => this.dictionaries?.[locale])
+      .find(Boolean)
 
     if (dictionary === undefined) {
       throw new I18nError(`could not find '${this.locale}' dictionary (default: ${this.defaultLocale ?? '[not set]'})`)
@@ -178,51 +88,83 @@ export class I18n {
     this.dictionary = dictionary
   }
 
-  private lookup(object: Record<string, any>, path: string, failOnNonString: boolean) {
-    const keys = path.split('.')
+  private rebuildRenderer () {
+    this.renderer = new Renderer({
+      tags: this.tags,
+      anchor: this.anchor,
+      maxDepth: this.options.maxAnchorDepth ?? DEFAULT_MAX_ANCHOR_DEPTH,
+      resolve: (key: string) => this.getTemplate(key) as string
+    })
+  }
 
-    let result: any = { ...object }
+  private render (template: string, scope?: Scope): string {
+    return this.renderer.render(template, scope)
+  }
 
-    for (const key of keys) {
-      result = result[key]
+  private localeChain (): string[] {
+    const chain: string[] = []
 
-      if (result === undefined) {
-        result = path
+    const add = (locale?: string) => {
+      if (locale === undefined) {
+        return
+      }
 
-        break
+      if (!chain.includes(locale)) {
+        chain.push(locale)
+      }
+
+      if (locale.includes('-')) {
+        const base = locale.slice(0, locale.indexOf('-'))
+
+        if (!chain.includes(base)) {
+          chain.push(base)
+        }
       }
     }
 
-    if (typeof result !== 'string' && failOnNonString) {
-      throw new I18nError(`failed to lookup for '${path}': the result is not a string`)
+    add(this.locale)
+    add(this.defaultLocale)
+
+    const fallback = this.options.fallbackLocale
+
+    if (Array.isArray(fallback)) {
+      fallback.forEach(add)
+    } else {
+      add(fallback)
     }
 
-    return result
+    return chain
   }
 
-  private getTemplate(key: string, failOnNonString = true, dictionary = this.dictionary!) {
-    if (key.includes('.')) {
-      return this.lookup(dictionary, key, failOnNonString)
+  private getTemplate (key: string, failOnNonString = true, dictionary?: Record<string, any>) {
+    const dictionaries = dictionary !== undefined
+      ? [dictionary]
+      : this.localeChain().map((locale) => this.dictionaries?.[locale]).filter(Boolean) as Record<string, any>[]
+
+    for (const dict of dictionaries) {
+      const { value, found } = lookup(dict, key)
+
+      if (!found) {
+        continue
+      }
+
+      if (typeof value !== 'string' && failOnNonString) {
+        throw new I18nError(`failed to lookup for '${key}': the result is not a string`)
+      }
+
+      return value
     }
 
-    let template = dictionary[key]
-
-    if (template === undefined && this.fallbackLocale !== undefined) {
-      template = this.dictionaries![this.fallbackLocale][key]
-    }
-
-    if (template === undefined) {
-      return key
-    }
-
-    if (typeof template !== 'string' && failOnNonString) {
-      throw new I18nError(`failed to lookup for '${key}': the result is not a string`)
-    }
-
-    return template
+    return key
   }
 
-  private preload(requireLocale = true) {
+  private missing (key: string): string | undefined {
+    const result = this.options.onMissing?.(key, this.locale)
+
+    return typeof result === 'string' ? result : undefined
+  }
+
+  private preload (requireLocale = true) {
     if (this.dictionaries === undefined) {
       this.loadDictionaries()
     }
@@ -244,7 +186,7 @@ export class I18n {
   /**
    * Returns current locale
    */
-  get locale() {
+  get locale () {
     return this.options.currentLocale
   }
 
@@ -252,7 +194,7 @@ export class I18n {
    * Updates current locale
    * @param locale New locale
    */
-  set locale(locale) {
+  set locale (locale) {
     this.options.currentLocale = locale
 
     if (this.dictionaries !== undefined) {
@@ -264,7 +206,7 @@ export class I18n {
   /**
    * Returns fallback locale
    */
-  get fallbackLocale() {
+  get fallbackLocale () {
     return this.options.fallbackLocale
   }
 
@@ -272,7 +214,7 @@ export class I18n {
    * Updates fallback locale
    * @param locale New fallback locale
    */
-  set fallbackLocale(locale) {
+  set fallbackLocale (locale) {
     this.options.fallbackLocale = locale
   }
 
@@ -280,7 +222,7 @@ export class I18n {
   /**
    * Returns default locale - a locale which will be used in case current locale was not found
    */
-  get defaultLocale() {
+  get defaultLocale () {
     return this.options.defaultLocale
   }
 
@@ -288,7 +230,7 @@ export class I18n {
    * Updates default locale
    * @param locale New locale
    */
-  set defaultLocale(locale) {
+  set defaultLocale (locale) {
     this.options.defaultLocale = locale
 
     if (this.dictionaries !== undefined) {
@@ -300,7 +242,7 @@ export class I18n {
   /**
    * Returns path to locales
    */
-  get localesPath() {
+  get localesPath () {
     return this.options.localesPath
   }
 
@@ -308,7 +250,7 @@ export class I18n {
    * Updates locales path
    * @param path New path
    */
-  set localesPath(path) {
+  set localesPath (path) {
     this.options.localesPath = path
 
     this.loadDictionaries()
@@ -320,29 +262,30 @@ export class I18n {
   /**
    * Returns a list of render templates tags
    */
-  get tags() {
-    return this.options.tags ?? ['{{', '}}']
+  get tags () {
+    return this.options.tags ?? DEFAULT_TAGS
   }
 
   /**
    * Updates a list of render templates tags
    */
-  set tags(tags) {
+  set tags (tags) {
     this.options.tags = tags
+    this.rebuildRenderer()
   }
 
 
   /**
    * Returns whether the package will throw an error if it fails to find a translation
    */
-  get throwOnFailure(): boolean {
+  get throwOnFailure (): boolean {
     return this.options.throwOnFailure ?? false
   }
 
   /**
    * Updates whether the package will throw an error if it fails to find a translation
    */
-  set throwOnFailure(value: boolean | undefined) {
+  set throwOnFailure (value: boolean | undefined) {
     this.options.throwOnFailure = value ?? false
   }
 
@@ -350,14 +293,14 @@ export class I18n {
   /**
    * Returns a function which is called when contents of a file are read
    */
-  get parser(): Parser {
+  get parser (): Parser {
     return this.options.parser ?? defaultParser
   }
 
   /**
    * Updates a function which is called when contents of a file are read
    */
-  set parser(parser: Parser | undefined) {
+  set parser (parser: Parser | undefined) {
     this.options.parser = parser ?? defaultParser
   }
 
@@ -365,14 +308,14 @@ export class I18n {
   /**
    * Returns a list of accepted file extensions (or an empty one if all files extensions are accepted)
    */
-  get extensions() {
+  get extensions () {
     return this.options.extensions ?? []
   }
 
   /**
    * Updates a list of accepted file extensions (or an empty one if all files extensions are accepted)
    */
-  set extensions(extensions) {
+  set extensions (extensions) {
     this.options.extensions = extensions
   }
 
@@ -380,7 +323,7 @@ export class I18n {
    * Returns a symbol resembling an anchor to the other translation in the current locale
    */
   get anchor () {
-    return this.options.anchor ?? '#'
+    return this.options.anchor ?? DEFAULT_ANCHOR
   }
 
   /**
@@ -388,21 +331,73 @@ export class I18n {
    */
   set anchor (anchor) {
     this.options.anchor = anchor
+    this.rebuildRenderer()
+  }
+
+
+  /**
+   * Returns the onMissing handler
+   */
+  get onMissing () {
+    return this.options.onMissing
+  }
+
+  /**
+   * Updates the onMissing handler
+   */
+  set onMissing (handler) {
+    this.options.onMissing = handler
+  }
+
+
+  /**
+   * Returns maximum anchor resolution depth
+   */
+  get maxAnchorDepth () {
+    return this.options.maxAnchorDepth ?? DEFAULT_MAX_ANCHOR_DEPTH
+  }
+
+  /**
+   * Updates maximum anchor resolution depth
+   */
+  set maxAnchorDepth (depth) {
+    this.options.maxAnchorDepth = depth
+    this.rebuildRenderer()
   }
 
 
   /**
    * Returns all the languages found in `localesPath`
    */
-  getLanguages() {
+  getLanguages () {
     return this.languages
+  }
+
+  scope<P extends Key<T>> (prefix: P): ScopedTranslator<PathValue<T, P>> {
+    return createScope<T, PathValue<T, P>>(this, prefix as string)
+  }
+
+  async reload () {
+    if (this.localesPath === undefined) {
+      throw new I18nError('`localesPath` is not defined')
+    }
+
+    const { dictionaries, languages } = await loadDictionariesAsync(this.localesPath, this.extensions, this.parser)
+
+    this.dictionaries = dictionaries
+    this.languages = languages
+    this.dictionary = undefined
+
+    if (this.locale !== undefined) {
+      this.loadDictionary()
+    }
   }
 
   /**
    * Returns whether [keys] exist in context of current locale
    * @param keys Locale keys to search for
    */
-  exists<K extends MaybeArray<string>, R extends Either<K, boolean, boolean[]>>(keys: K): R {
+  exists<K extends MaybeArray<Key<T>>> (keys: K): K extends readonly any[] ? boolean[] : boolean {
     this.preload()
 
     const keysWereArray = Array.isArray(keys)
@@ -417,10 +412,10 @@ export class I18n {
     }
 
     if (keysWereArray) {
-      return results as R
+      return results as any
     }
 
-    return results[0] as R
+    return results[0] as any
   }
 
 
@@ -429,24 +424,36 @@ export class I18n {
    * @param key Locale key
    * @alias __r
    */
-  r<T>(key: string) {
-    return this.__r<T>(key)
+  r<K extends Key<T>> (key: K): RawValue<T, K> {
+    return this.__r<K>(key)
+  }
+
+  raw<K extends Key<T>> (key: K): RawValue<T, K> {
+    return this.__r<K>(key)
   }
 
   /**
    * Returns raw entity from the locale file
    * @param key Locale key
    */
-  __r<T>(key: string): T {
+  __r<K extends Key<T>> (key: K): RawValue<T, K> {
     this.preload()
 
-    const template = this.getTemplate(key, false) as T
+    const template = this.getTemplate(key as string, false)
 
-    if (this.throwOnFailure && template === key) {
-      throw new I18nError(`failed to get raw entity by key '${key}'`)
+    if (template === key) {
+      if (this.throwOnFailure) {
+        throw new I18nError(`failed to get raw entity by key '${key}'`)
+      }
+
+      const fallback = this.missing(key as string)
+
+      if (fallback !== undefined) {
+        return fallback as RawValue<T, K>
+      }
     }
 
-    return template
+    return template as RawValue<T, K>
   }
 
 
@@ -456,7 +463,11 @@ export class I18n {
    * @param scope Scope for variables
    * @alias __
    */
-  t(keys: MaybeArray<string>, scope?: Scope) {
+  t (keys: MaybeArray<Key<T>>, scope?: Scope) {
+    return this.__(keys, scope)
+  }
+
+  translate (keys: MaybeArray<Key<T>>, scope?: Scope) {
     return this.__(keys, scope)
   }
 
@@ -465,12 +476,12 @@ export class I18n {
    * @param keys String or an array of strings of translation keys
    * @param scope Scope for variables
    */
-  __(keys: MaybeArray<string>, scope?: Scope) {
+  __ (keys: MaybeArray<Key<T>>, scope?: Scope) {
     this.preload()
 
     const isInitiallyArray = Array.isArray(keys)
 
-    const actualKeys: string[] = isInitiallyArray ? keys : [keys]
+    const actualKeys: string[] = isInitiallyArray ? keys as string[] : [keys as string]
 
     for (const key of actualKeys) {
       const template = this.getTemplate(key) as string
@@ -484,6 +495,12 @@ export class I18n {
       throw new I18nError(`failed to render the template by keys ${actualKeys.join(', ')}`)
     }
 
+    const fallback = this.missing(actualKeys[actualKeys.length - 1])
+
+    if (fallback !== undefined) {
+      return this.render(fallback, scope).trim()
+    }
+
     return this.render(actualKeys[actualKeys.length - 1], scope).trim()
   }
 
@@ -495,7 +512,11 @@ export class I18n {
    * @param scope Scope for variables
    * @alias __n
    */
-  p(count: number, key: string, scope?: Scope) {
+  p (count: number, key: Key<T>, scope?: Scope) {
+    return this.__n(count, key, scope)
+  }
+
+  plural (count: number, key: Key<T>, scope?: Scope) {
     return this.__n(count, key, scope)
   }
 
@@ -505,39 +526,30 @@ export class I18n {
    * @param key Locale key
    * @param scope Scope for variables
    */
-  __n(count: number, key: string, scope?: Scope) {
-    const obj = this.__r<Record<string, any>>(key)
+  __n (count: number, key: Key<T>, scope?: Scope) {
+    this.preload()
 
-    if (obj === undefined) {
+    const obj = this.getTemplate(key as string, false)
+
+    if (typeof obj !== 'object' || obj === null) {
       if (this.throwOnFailure) {
         throw new I18nError(`failed to find the template by key '${key}'`)
       }
 
-      return key
+      return this.missing(key as string) ?? key
     }
 
-    // INFO: why ar-EG? because this locale returns the most amount of rules possible and thus is good for our task
-    const pr = new Intl.PluralRules('ar-EG')
-    const rule = pr.select(count)
-
-    const templateByRule: Partial<Record<typeof rule, any>> = {
-      zero: obj.zero ?? obj.other ?? obj.many,
-      one: obj.one ?? obj.other,
-      two: obj.two ?? obj.few ?? obj.many,
-      few: obj.few ?? obj.many,
-    }
-
-    const template = templateByRule[rule] ?? obj.many ?? obj.other
+    const template = selectPluralTemplate(obj as Record<string, any>, count, this.locale as string)
 
     if (template === undefined) {
       if (this.throwOnFailure) {
         throw new I18nError(`failed to render the plural template by key '${key}'`)
       }
 
-      return key
+      return this.missing(key as string) ?? key
     }
 
-    return this.render(template, scope)
+    return this.render(template, { count, ...scope })
   }
 
 
@@ -547,7 +559,11 @@ export class I18n {
    * @param scope Scope for variables
    * @alias __l
    */
-  l(key: string, scope?: Scope) {
+  l (key: Key<T>, scope?: Scope) {
+    return this.__l(key, scope)
+  }
+
+  list (key: Key<T>, scope?: Scope) {
     return this.__l(key, scope)
   }
 
@@ -556,7 +572,7 @@ export class I18n {
    * @param key Locales key
    * @param scope Scope for variables
    */
-  __l(key: string, scope?: Scope) {
+  __l (key: Key<T>, scope?: Scope) {
     this.preload(false)
 
     const templates: string[] = []
@@ -564,10 +580,10 @@ export class I18n {
     for (const language of this.languages) {
       const dictionary = this.dictionaries![language]
 
-      const template = this.getTemplate(key, true, dictionary)
+      const template = this.getTemplate(key as string, true, dictionary)
 
       if (template !== key) {
-        templates.push(this.render(template, scope))
+        templates.push(this.render(template as string, scope))
       }
     }
 

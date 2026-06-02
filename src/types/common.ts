@@ -2,8 +2,6 @@ import { Scope } from 'micromustache'
 
 import { Parser } from '../loader.js'
 
-export type Either<T extends string | string[], L = string, R = string[]> = T extends L ? L : R
-
 export type MaybeArray<T> = T | T[]
 
 export type OnMissing = (key: string, locale: string | undefined) => string | void

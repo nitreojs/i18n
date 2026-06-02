@@ -76,7 +76,7 @@ export class I18n<T = unknown> {
     this.languages = languages
   }
 
-  private loadDictionary() {
+  private loadDictionary () {
     const dictionary: Record<string, any> =
       this.dictionaries![this.locale as string] ??
       this.dictionaries![this.defaultLocale as string]
@@ -164,7 +164,7 @@ export class I18n<T = unknown> {
     return typeof result === 'string' ? result : undefined
   }
 
-  private preload(requireLocale = true) {
+  private preload (requireLocale = true) {
     if (this.dictionaries === undefined) {
       this.loadDictionaries()
     }
@@ -186,7 +186,7 @@ export class I18n<T = unknown> {
   /**
    * Returns current locale
    */
-  get locale() {
+  get locale () {
     return this.options.currentLocale
   }
 
@@ -194,7 +194,7 @@ export class I18n<T = unknown> {
    * Updates current locale
    * @param locale New locale
    */
-  set locale(locale) {
+  set locale (locale) {
     this.options.currentLocale = locale
 
     if (this.dictionaries !== undefined) {
@@ -206,7 +206,7 @@ export class I18n<T = unknown> {
   /**
    * Returns fallback locale
    */
-  get fallbackLocale() {
+  get fallbackLocale () {
     return this.options.fallbackLocale
   }
 
@@ -214,7 +214,7 @@ export class I18n<T = unknown> {
    * Updates fallback locale
    * @param locale New fallback locale
    */
-  set fallbackLocale(locale) {
+  set fallbackLocale (locale) {
     this.options.fallbackLocale = locale
   }
 
@@ -222,7 +222,7 @@ export class I18n<T = unknown> {
   /**
    * Returns default locale - a locale which will be used in case current locale was not found
    */
-  get defaultLocale() {
+  get defaultLocale () {
     return this.options.defaultLocale
   }
 
@@ -230,7 +230,7 @@ export class I18n<T = unknown> {
    * Updates default locale
    * @param locale New locale
    */
-  set defaultLocale(locale) {
+  set defaultLocale (locale) {
     this.options.defaultLocale = locale
 
     if (this.dictionaries !== undefined) {
@@ -242,7 +242,7 @@ export class I18n<T = unknown> {
   /**
    * Returns path to locales
    */
-  get localesPath() {
+  get localesPath () {
     return this.options.localesPath
   }
 
@@ -250,7 +250,7 @@ export class I18n<T = unknown> {
    * Updates locales path
    * @param path New path
    */
-  set localesPath(path) {
+  set localesPath (path) {
     this.options.localesPath = path
 
     this.loadDictionaries()
@@ -262,7 +262,7 @@ export class I18n<T = unknown> {
   /**
    * Returns a list of render templates tags
    */
-  get tags() {
+  get tags () {
     return this.options.tags ?? DEFAULT_TAGS
   }
 
@@ -278,14 +278,14 @@ export class I18n<T = unknown> {
   /**
    * Returns whether the package will throw an error if it fails to find a translation
    */
-  get throwOnFailure(): boolean {
+  get throwOnFailure (): boolean {
     return this.options.throwOnFailure ?? false
   }
 
   /**
    * Updates whether the package will throw an error if it fails to find a translation
    */
-  set throwOnFailure(value: boolean | undefined) {
+  set throwOnFailure (value: boolean | undefined) {
     this.options.throwOnFailure = value ?? false
   }
 
@@ -293,14 +293,14 @@ export class I18n<T = unknown> {
   /**
    * Returns a function which is called when contents of a file are read
    */
-  get parser(): Parser {
+  get parser (): Parser {
     return this.options.parser ?? defaultParser
   }
 
   /**
    * Updates a function which is called when contents of a file are read
    */
-  set parser(parser: Parser | undefined) {
+  set parser (parser: Parser | undefined) {
     this.options.parser = parser ?? defaultParser
   }
 
@@ -308,14 +308,14 @@ export class I18n<T = unknown> {
   /**
    * Returns a list of accepted file extensions (or an empty one if all files extensions are accepted)
    */
-  get extensions() {
+  get extensions () {
     return this.options.extensions ?? []
   }
 
   /**
    * Updates a list of accepted file extensions (or an empty one if all files extensions are accepted)
    */
-  set extensions(extensions) {
+  set extensions (extensions) {
     this.options.extensions = extensions
   }
 
@@ -369,7 +369,7 @@ export class I18n<T = unknown> {
   /**
    * Returns all the languages found in `localesPath`
    */
-  getLanguages() {
+  getLanguages () {
     return this.languages
   }
 

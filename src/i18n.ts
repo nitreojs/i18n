@@ -99,12 +99,51 @@ export class I18n<T = unknown> {
     return this.renderer.render(template, scope)
   }
 
-  private getTemplate (key: string, failOnNonString = true, dictionary = this.dictionary!) {
-    if (key.includes('.')) {
-      const { value, found } = lookup(dictionary, key)
+  private localeChain (): string[] {
+    const chain: string[] = []
+
+    const add = (locale?: string) => {
+      if (locale === undefined) {
+        return
+      }
+
+      if (!chain.includes(locale)) {
+        chain.push(locale)
+      }
+
+      if (locale.includes('-')) {
+        const base = locale.slice(0, locale.indexOf('-'))
+
+        if (!chain.includes(base)) {
+          chain.push(base)
+        }
+      }
+    }
+
+    add(this.locale)
+    add(this.defaultLocale)
+
+    const fallback = this.options.fallbackLocale
+
+    if (Array.isArray(fallback)) {
+      fallback.forEach(add)
+    } else {
+      add(fallback)
+    }
+
+    return chain
+  }
+
+  private getTemplate (key: string, failOnNonString = true, dictionary?: Record<string, any>) {
+    const dictionaries = dictionary !== undefined
+      ? [dictionary]
+      : this.localeChain().map((locale) => this.dictionaries?.[locale]).filter(Boolean) as Record<string, any>[]
+
+    for (const dict of dictionaries) {
+      const { value, found } = lookup(dict, key)
 
       if (!found) {
-        return key
+        continue
       }
 
       if (typeof value !== 'string' && failOnNonString) {
@@ -114,21 +153,13 @@ export class I18n<T = unknown> {
       return value
     }
 
-    let template = dictionary[key]
+    return key
+  }
 
-    if (template === undefined && this.fallbackLocale !== undefined) {
-      template = this.dictionaries![this.fallbackLocale as string]?.[key]
-    }
+  private missing (key: string): string | undefined {
+    const result = this.options.onMissing?.(key, this.locale)
 
-    if (template === undefined) {
-      return key
-    }
-
-    if (typeof template !== 'string' && failOnNonString) {
-      throw new I18nError(`failed to lookup for '${key}': the result is not a string`)
-    }
-
-    return template
+    return typeof result === 'string' ? result : undefined
   }
 
   private preload(requireLocale = true) {
@@ -303,6 +334,37 @@ export class I18n<T = unknown> {
 
 
   /**
+   * Returns the onMissing handler
+   */
+  get onMissing () {
+    return this.options.onMissing
+  }
+
+  /**
+   * Updates the onMissing handler
+   */
+  set onMissing (handler) {
+    this.options.onMissing = handler
+  }
+
+
+  /**
+   * Returns maximum anchor resolution depth
+   */
+  get maxAnchorDepth () {
+    return this.options.maxAnchorDepth ?? DEFAULT_MAX_ANCHOR_DEPTH
+  }
+
+  /**
+   * Updates maximum anchor resolution depth
+   */
+  set maxAnchorDepth (depth) {
+    this.options.maxAnchorDepth = depth
+    this.rebuildRenderer()
+  }
+
+
+  /**
    * Returns all the languages found in `localesPath`
    */
   getLanguages() {
@@ -369,8 +431,16 @@ export class I18n<T = unknown> {
 
     const template = this.getTemplate(key as string, false)
 
-    if (this.throwOnFailure && template === key) {
-      throw new I18nError(`failed to get raw entity by key '${key}'`)
+    if (template === key) {
+      if (this.throwOnFailure) {
+        throw new I18nError(`failed to get raw entity by key '${key}'`)
+      }
+
+      const fallback = this.missing(key as string)
+
+      if (fallback !== undefined) {
+        return fallback as RawValue<T, K>
+      }
     }
 
     return template as RawValue<T, K>
@@ -411,6 +481,12 @@ export class I18n<T = unknown> {
       throw new I18nError(`failed to render the template by keys ${actualKeys.join(', ')}`)
     }
 
+    const fallback = this.missing(actualKeys[actualKeys.length - 1])
+
+    if (fallback !== undefined) {
+      return this.render(fallback, scope).trim()
+    }
+
     return this.render(actualKeys[actualKeys.length - 1], scope).trim()
   }
 
@@ -433,24 +509,26 @@ export class I18n<T = unknown> {
    * @param scope Scope for variables
    */
   __n (count: number, key: Key<T>, scope?: Scope) {
-    const obj = this.__r(key) as unknown as Record<string, any>
+    this.preload()
 
-    if (obj === undefined || typeof obj !== 'object') {
+    const obj = this.getTemplate(key as string, false)
+
+    if (typeof obj !== 'object' || obj === null) {
       if (this.throwOnFailure) {
         throw new I18nError(`failed to find the template by key '${key}'`)
       }
 
-      return key
+      return this.missing(key as string) ?? key
     }
 
-    const template = selectPluralTemplate(obj, count, this.locale as string)
+    const template = selectPluralTemplate(obj as Record<string, any>, count, this.locale as string)
 
     if (template === undefined) {
       if (this.throwOnFailure) {
         throw new I18nError(`failed to render the plural template by key '${key}'`)
       }
 
-      return key
+      return this.missing(key as string) ?? key
     }
 
     return this.render(template, { count, ...scope })
@@ -483,7 +561,7 @@ export class I18n<T = unknown> {
       const template = this.getTemplate(key as string, true, dictionary)
 
       if (template !== key) {
-        templates.push(this.render(template, scope))
+        templates.push(this.render(template as string, scope))
       }
     }
 

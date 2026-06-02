@@ -16,7 +16,8 @@
     "node": ">=20.11.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "i18n"

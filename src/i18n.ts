@@ -1,12 +1,13 @@
-import { render, Scope } from 'micromustache'
+import { Scope } from 'micromustache'
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { DEFAULT_ANCHOR, DEFAULT_TAGS } from './constants.js'
+import { DEFAULT_ANCHOR, DEFAULT_MAX_ANCHOR_DEPTH, DEFAULT_TAGS } from './constants.js'
 import { I18nError } from './errors/index.js'
 import { Either, MaybeArray } from './types/types.js'
-import { escapeRegExp, lookup, selectPluralTemplate } from './utils/index.js'
+import { lookup, selectPluralTemplate } from './utils/index.js'
+import { Renderer } from './renderer.js'
 
 type Parser = (contents: string) => Record<string, any>
 
@@ -47,17 +48,21 @@ interface I18nOptions {
   extensions?: string[]
   /**
    * A symbol resembling an anchor to the other translation in the current locale.
-   * 
+   *
    * @default '#'
    */
   anchor?: string
+  /**
+   * Maximum inline-anchor resolution depth before throwing (guards against circular anchors)
+   */
+  maxAnchorDepth?: number
 }
 
 /**
  * Main I18n class
  */
 export class I18n {
-  private readonly render: (template: string, scope?: Scope) => string
+  private renderer!: Renderer
 
   private dictionaries: Record<string, any> | undefined
   private dictionary: Record<string, any> | undefined
@@ -68,38 +73,13 @@ export class I18n {
       throw new I18nError('`tags` should consist of exactly two strings')
     }
 
-    const tags = this.options.tags ?? DEFAULT_TAGS
     const anchor = this.options.anchor ?? DEFAULT_ANCHOR
 
     if (anchor.length !== 1) {
       throw new I18nError('`anchor` should consist of exactly one character')
     }
 
-    const escapedTags = tags.map(escapeRegExp)
-    const escapedAnchor = escapeRegExp(anchor)
-
-    this.render = (template: string, scope?: Scope) => {
-      // funny variable names
-      const re = `${escapedTags[0]}\\s*${escapedAnchor}(.+?)\\s*${escapedTags[1]}`
-      const  Re = new RegExp(re)
-      const gRe = new RegExp(re, 'g')
-
-      const preprocessed = template.replace(gRe, (match, key) => {
-        const value = this.getTemplate(key)
-
-        if (value === key) {
-          return ''
-        }
-
-        return value
-      })
-
-      if (Re.test(preprocessed)) {
-        return this.render(preprocessed, scope)
-      }
-
-      return render(preprocessed, scope, { tags })
-    }
+    this.rebuildRenderer()
 
     if (this.options.localesPath !== undefined) {
       this.loadDictionaries()
@@ -176,6 +156,19 @@ export class I18n {
     }
 
     this.dictionary = dictionary
+  }
+
+  private rebuildRenderer () {
+    this.renderer = new Renderer({
+      tags: this.tags,
+      anchor: this.anchor,
+      maxDepth: this.options.maxAnchorDepth ?? DEFAULT_MAX_ANCHOR_DEPTH,
+      resolve: (key: string) => this.getTemplate(key) as string
+    })
+  }
+
+  private render (template: string, scope?: Scope): string {
+    return this.renderer.render(template, scope)
   }
 
   private getTemplate (key: string, failOnNonString = true, dictionary = this.dictionary!) {
@@ -315,8 +308,9 @@ export class I18n {
   /**
    * Updates a list of render templates tags
    */
-  set tags(tags) {
+  set tags (tags) {
     this.options.tags = tags
+    this.rebuildRenderer()
   }
 
 
@@ -376,6 +370,7 @@ export class I18n {
    */
   set anchor (anchor) {
     this.options.anchor = anchor
+    this.rebuildRenderer()
   }
 
 
